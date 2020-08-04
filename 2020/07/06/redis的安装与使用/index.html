@@ -20,28 +20,33 @@
     var CONFIG = {"hostname":"fatefrank.github.io","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
   </script>
 
-  <meta property="og:type" content="website">
-<meta property="og:title" content="Seif Zheng&#39;s blog">
-<meta property="og:url" content="http://fatefrank.github.io/page/2/index.html">
+  <meta name="description" content="redisredis的安装和配置 到官方网站下载最新稳定版的redis压缩包  上传到&#x2F;home&#x2F;software  解压redis压缩包 1tar -zxvf  redis-5.0.8.tar.gz  下载 gcc依赖 1yum install gcc-c++  编译 1make  安装 1make install  将redis的启动脚本拷贝出来 1cp &#x2F;home&#x2F;sof">
+<meta property="og:type" content="article">
+<meta property="og:title" content="redis的安装与使用">
+<meta property="og:url" content="http://fatefrank.github.io/2020/07/06/redis%E7%9A%84%E5%AE%89%E8%A3%85%E4%B8%8E%E4%BD%BF%E7%94%A8/index.html">
 <meta property="og:site_name" content="Seif Zheng&#39;s blog">
+<meta property="og:description" content="redisredis的安装和配置 到官方网站下载最新稳定版的redis压缩包  上传到&#x2F;home&#x2F;software  解压redis压缩包 1tar -zxvf  redis-5.0.8.tar.gz  下载 gcc依赖 1yum install gcc-c++  编译 1make  安装 1make install  将redis的启动脚本拷贝出来 1cp &#x2F;home&#x2F;sof">
 <meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2020-07-05T16:00:00.000Z">
+<meta property="article:modified_time" content="2020-08-04T07:49:28.682Z">
 <meta property="article:author" content="Seif Zheng">
+<meta property="article:tag" content="redis">
 <meta name="twitter:card" content="summary">
 
-<link rel="canonical" href="http://fatefrank.github.io/page/2/">
+<link rel="canonical" href="http://fatefrank.github.io/2020/07/06/redis%E7%9A%84%E5%AE%89%E8%A3%85%E4%B8%8E%E4%BD%BF%E7%94%A8/">
 
 
 <script id="page-configurations">
   // https://hexo.io/docs/variables.html
   CONFIG.page = {
     sidebar: "",
-    isHome : true,
-    isPost : false,
+    isHome : false,
+    isPost : true,
     lang   : 'zh-CN'
   };
 </script>
 
-  <title>Seif Zheng's blog</title>
+  <title>redis的安装与使用 | Seif Zheng's blog</title>
   
 
 
@@ -153,312 +158,10 @@
         <div class="content-wrap">
           
 
-          <div class="content index posts-expand">
+          <div class="content post posts-expand">
             
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="http://fatefrank.github.io/2020/07/13/02-hotspot-jvm-object/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Seif Zheng">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Seif Zheng's blog">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2020/07/13/02-hotspot-jvm-object/" class="post-title-link" itemprop="url">JVM 系列(二) - HotSpot 虚拟机</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-07-13 00:00:00" itemprop="dateCreated datePublished" datetime="2020-07-13T00:00:00+08:00">2020-07-13</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-08-04 15:55:10" itemprop="dateModified" datetime="2020-08-04T15:55:10+08:00">2020-08-04</time>
-              </span>
-
-          
-
-        </div>
-      </header>
 
     
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="HotSpot-虚拟机对象探秘"><a href="#HotSpot-虚拟机对象探秘" class="headerlink" title="HotSpot 虚拟机对象探秘"></a>HotSpot 虚拟机对象探秘</h1><h2 id="对象的内存布局"><a href="#对象的内存布局" class="headerlink" title="对象的内存布局"></a>对象的内存布局</h2><p>在 HotSpot 虚拟机中，对象的内存布局分为以下 3 块区域：</p>
-<ul>
-<li>对象头（Header）</li>
-<li>实例数据（Instance Data）</li>
-<li>对齐填充（Padding）</li>
-</ul>
-<p><img src="./images/object-memory-layout.png" alt="object-memory-layout.png"></p>
-<h3 id="对象头"><a href="#对象头" class="headerlink" title="对象头"></a>对象头</h3><p>Mark Word被设计成一个有着动态定义的数据结构，以便在极小的空间内存储尽量多的数据，根据对象的状态复用自己的存储空间。</p>
-<p>Mark Word的长度在32位和64位的虚拟机（未开启压缩指针）中分别为32个比特和64个比特。</p>
-<p>Mark Word记录了对象在运行过程中所需要使用的一些数据：</p>
-<ul>
-<li>哈希码</li>
-<li>GC 分代年龄</li>
-<li>锁状态标志</li>
-<li>线程持有的锁</li>
-<li>偏向线程 ID</li>
-<li>偏向时间戳</li>
-</ul>
-<p>对象头的另外一部分是类型指针，即对象指向它的类型元数据的指针，Java虚拟机通过这个指针来确定该对象是哪个类的实例。并不是所有的虚拟机实现都必须在对象数据上保留类型指针，换句话说，查找对象的元数据信息并不一定要经过对象本身。</p>
-<p>此外，如果对象是一个Java数组，那在对象头中还必须有一块用于记录数组长度的数据，因为虚拟机可以通过普通<br>Java对象的元数据信息确定Java对象的大小，但是如果数组的长度是不确定的，将无法通过元数据中的信息推断出数组的大小。</p>
-<h3 id="实例数据"><a href="#实例数据" class="headerlink" title="实例数据"></a>实例数据</h3><p>实例数据部分就是成员变量的值，其中包括父类成员变量和本类成员变量。</p>
-<p>这部分的存储顺序会受到虚拟机分配策略参数（-XX：FieldsAllocationStyle参数）和字段在Java源码中定义顺序的影响。</p>
-<h3 id="对齐填充"><a href="#对齐填充" class="headerlink" title="对齐填充"></a>对齐填充</h3><p>用于确保对象的总长度为 8 字节的整数倍。</p>
-<p>HotSpot VM 的自动内存管理系统要求对象的大小必须是 8 字节的整数倍。而对象头部分正好是 8 字节的倍数（1 倍或 2 倍），因此，当对象实例数据部分没有对齐时，就需要通过对齐填充来补全。</p>
-<blockquote>
-<p>对齐填充并不是必然存在，也没有特别的含义，它仅仅起着占位符的作用。</p>
-</blockquote>
-<h2 id="对象的创建过程"><a href="#对象的创建过程" class="headerlink" title="对象的创建过程"></a>对象的创建过程</h2><h3 id="类加载检查"><a href="#类加载检查" class="headerlink" title="类加载检查"></a>类加载检查</h3><p>虚拟机在解析<code>.class</code>文件时，若遇到一条 new 指令，首先它会去检查常量池中是否有这个类的符号引用，并且检查这个符号引用所代表的类是否已被加载、解析和初始化过。如果没有，那么必须先执行相应的类加载过程。</p>
-<h3 id="为新生对象分配内存"><a href="#为新生对象分配内存" class="headerlink" title="为新生对象分配内存"></a>为新生对象分配内存</h3><p>对象所需内存的大小在类加载完成后便可完全确定，接下来从堆中划分一块对应大小的内存空间给新的对象。分配堆中内存有两种方式：</p>
-<ul>
-<li><strong>指针碰撞</strong><br><br>如果 Java <strong>堆中内存绝对规整</strong>（说明采用的是“<strong>复制算法</strong>”或“<strong>标记整理法</strong>”），空闲内存和已使用内存中间放着一个指针作为分界点指示器，那么分配内存时只需要把指针向空闲内存挪动一段与对象大小一样的距离，这种分配方式称为“<strong>指针碰撞</strong>”。</li>
-<li><strong>空闲列表</strong><br><br>如果 Java <strong>堆中内存并不规整</strong>，已使用的内存和空闲内存交错（说明采用的是<strong>标记-清除法</strong>，有碎片），此时没法简单进行指针碰撞， VM 必须维护一个列表，记录其中哪些内存块空闲可用。分配之时从空闲列表中找到一块足够大的内存空间划分给对象实例。这种方式称为“<strong>空闲列表</strong>”。</li>
-</ul>
-<p>对象创建在虚拟机中是非常频繁的行为，在并发情况下也并不是线程安全的，有两种可选解决方案：</p>
-<ul>
-<li><p>对分配内存空间的动作进行同步处理——实际上虚拟机是采用CAS配上失败重试的方式保证更新操作的原子性。</p>
-</li>
-<li><p>把内存分配的动作按照线程划分在不同的空间之中进行，即每个线程在Java堆中预先分配一小块内存，称为本地线程分配缓冲（Thread Local Allocation Buffer，TLAB），哪个线程要分配内存，就在哪个线程的本地缓冲区中分配，只有本地缓冲区用完了，分配新的缓存区时才需要同步锁定。</p>
-<blockquote>
-<p>虚拟机是否使用TLAB，可以通过-XX：+/-UseTLAB参数来设定。</p>
-</blockquote>
-</li>
-</ul>
-<h3 id="初始化"><a href="#初始化" class="headerlink" title="初始化"></a>初始化</h3><p>分配完内存后，虚拟机必须将分配到的内存空间（但不包括对象头）都初始化为零值，如果使用了TLAB的话，这一项工作也可以提前至TLAB分配时顺便进行。</p>
-<blockquote>
-<p>这步操作保证了对象的实例字段在Java代码中可以不赋初始值就直接使用，使程序能访问到这些字段的数据类型所对应的零值。</p>
-</blockquote>
-<p>然后设置对象头信息。</p>
-<blockquote>
-<p>例如这个对象是哪个类的实例、如何才能找到类的元数据信息、对象的哈希码（实际上对象的哈希码会延后到真正调用Object::hashCode()方法时才计算）、对象的GC分代年龄等信息。这些信息存放在对象的对象头（Object Header）之中。根据虚拟机当前运行状态的不同，如是否启用偏向锁等，对象头会有不同的设置方式。</p>
-</blockquote>
-<p>最后调用对象的构造函数方法进行初始化，即Class文件中的<init>()方法。</p>
-<p>至此，整个对象的创建过程就完成了。</p>
-<h2 id="对象的访问方式"><a href="#对象的访问方式" class="headerlink" title="对象的访问方式"></a>对象的访问方式</h2><p>所有对象的存储空间都是在堆中分配的，但是这个对象的引用却是在堆栈中分配的。也就是说在建立一个对象时两个地方都分配内存，在堆中分配的内存实际建立这个对象，而在堆栈中分配的内存只是一个指向这个堆对象的指针（引用）而已。 那么根据引用存放的地址类型的不同，对象有不同的访问方式。</p>
-<h3 id="句柄访问方式"><a href="#句柄访问方式" class="headerlink" title="句柄访问方式"></a>句柄访问方式</h3><p>堆中需要有一块叫做“句柄池”的内存空间，句柄中包含了对象实例数据与类型数据各自的具体地址信息。</p>
-<p>引用类型的变量存放的是该对象的句柄地址（reference）。访问对象时，首先需要通过引用类型的变量找到该对象的句柄，然后根据句柄中对象的地址找到对象。</p>
-<p><img src="./images/handle-access.jpg" alt="handle-access"></p>
-<h3 id="直接指针访问方式"><a href="#直接指针访问方式" class="headerlink" title="直接指针访问方式"></a>直接指针访问方式</h3><p>引用类型的变量直接存放对象的地址，从而不需要句柄池，通过引用能够直接访问对象。但对象所在的内存空间需要额外的策略存储对象所属的类信息的地址。</p>
-<p><img src="./images/direct-pointer.jpg" alt="direct-pointer"></p>
-<p>需要说明的是，HotSpot 采用第二种方式，即直接指针方式来访问对象，只需要一次寻址操作，所以在性能上比句柄访问方式快一倍。但像上面所说，它需要<strong>额外的策略</strong>来存储对象在方法区中类信息的地址。</p>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="http://fatefrank.github.io/2020/07/12/01-jvm-memory-structure/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Seif Zheng">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Seif Zheng's blog">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2020/07/12/01-jvm-memory-structure/" class="post-title-link" itemprop="url">JVM 系列(一) - JVM 内存结构</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-07-12 00:00:00" itemprop="dateCreated datePublished" datetime="2020-07-12T00:00:00+08:00">2020-07-12</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-08-04 15:55:06" itemprop="dateModified" datetime="2020-08-04T15:55:06+08:00">2020-08-04</time>
-              </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="JVM-内存结构"><a href="#JVM-内存结构" class="headerlink" title="JVM 内存结构"></a>JVM 内存结构</h1><p>Java 虚拟机的内存空间分为 5 个部分：</p>
-<ul>
-<li>程序计数器</li>
-<li>Java 虚拟机栈</li>
-<li>本地方法栈</li>
-<li>堆</li>
-<li>方法区</li>
-</ul>
-<p><img src="./images/jvm-memory-structure.jpg" alt="jvm-memory-structure"></p>
-<p>JDK 1.8 同 JDK 1.7 比，最大的差别就是：元数据区取代了永久代。元空间的本质和永久代类似，都是对 JVM 规范中方法区的实现。不过元空间与永久代之间最大的区别在于：元数据空间并不在虚拟机中，而是使用本地内存。</p>
-<h2 id="程序计数器（PC-寄存器）"><a href="#程序计数器（PC-寄存器）" class="headerlink" title="程序计数器（PC 寄存器）"></a>程序计数器（PC 寄存器）</h2><h3 id="程序计数器的定义"><a href="#程序计数器的定义" class="headerlink" title="程序计数器的定义"></a>程序计数器的定义</h3><p>程序计数器是一块较小的内存空间，是当前线程正在执行的那条字节码指令的地址。若当前线程正在执行的是一个本地方法，那么此时程序计数器为<code>Undefined</code>。</p>
-<h3 id="程序计数器的作用"><a href="#程序计数器的作用" class="headerlink" title="程序计数器的作用"></a>程序计数器的作用</h3><ul>
-<li>字节码解释器通过改变程序计数器来依次读取指令，从而实现代码的流程控制。</li>
-<li>在多线程情况下，程序计数器记录的是当前线程执行的位置，从而当线程切换回来时，就知道上次线程执行到哪了。</li>
-</ul>
-<h3 id="程序计数器的特点"><a href="#程序计数器的特点" class="headerlink" title="程序计数器的特点"></a>程序计数器的特点</h3><ul>
-<li>是一块较小的内存空间。</li>
-<li>线程私有，每条线程都有自己的程序计数器。</li>
-<li>生命周期：随着线程的创建而创建，随着线程的结束而销毁。</li>
-<li>是唯一一个不会出现<code>OutOfMemoryError</code>的内存区域。</li>
-</ul>
-<h2 id="Java-虚拟机栈（Java-栈）"><a href="#Java-虚拟机栈（Java-栈）" class="headerlink" title="Java 虚拟机栈（Java 栈）"></a>Java 虚拟机栈（Java 栈）</h2><h3 id="Java-虚拟机栈的定义"><a href="#Java-虚拟机栈的定义" class="headerlink" title="Java 虚拟机栈的定义"></a>Java 虚拟机栈的定义</h3><p>Java 虚拟机栈是描述 Java 方法运行过程的内存模型。</p>
-<p>Java 虚拟机栈会为每一个即将运行的 Java 方法创建一块叫做“栈帧”的区域，用于存放该方法运行过程中的一些信息，如：</p>
-<ul>
-<li>局部变量表</li>
-<li>操作数栈</li>
-<li>动态链接</li>
-<li>方法出口信息</li>
-<li>……</li>
-</ul>
-<p><img src="./images/jvm-stack.jpg" alt="jvm-stack"></p>
-<h3 id="压栈出栈过程"><a href="#压栈出栈过程" class="headerlink" title="压栈出栈过程"></a>压栈出栈过程</h3><p>当方法运行过程中需要创建局部变量时，就将局部变量的值存入栈帧中的局部变量表中。</p>
-<p>Java 虚拟机栈的栈顶的栈帧是当前正在执行的活动栈，也就是当前正在执行的方法，PC 寄存器也会指向这个地址。只有这个活动的栈帧的本地变量可以被操作数栈使用，当在这个栈帧中调用另一个方法，与之对应的栈帧又会被创建，新创建的栈帧压入栈顶，变为当前的活动栈帧。</p>
-<p>方法结束后，当前栈帧被移出，栈帧的返回值变成新的活动栈帧中操作数栈的一个操作数。如果没有返回值，那么新的活动栈帧中操作数栈的操作数没有变化。</p>
-<blockquote>
-<p>由于Java 虚拟机栈是与线程对应的，数据不是线程共享的，因此不用关心数据一致性问题，也不会存在同步锁的问题。</p>
-</blockquote>
-<h3 id="Java-虚拟机栈的特点"><a href="#Java-虚拟机栈的特点" class="headerlink" title="Java 虚拟机栈的特点"></a>Java 虚拟机栈的特点</h3><ul>
-<li>局部变量表随着栈帧的创建而创建，它的大小在编译时确定，创建时只需分配事先规定的大小即可。在方法运行过程中，局部变量表的大小不会发生改变。</li>
-<li>Java 虚拟机栈会出现两种异常：StackOverFlowError 和 OutOfMemoryError。<ul>
-<li>StackOverFlowError  若 Java 虚拟机栈的大小不允许动态扩展，那么当线程请求栈的深度超过当前 Java 虚拟机栈的最大深度时，抛出 StackOverFlowError 异常。</li>
-<li>OutOfMemoryError  若允许动态扩展，那么当线程请求栈时内存用完了，无法再动态扩展时，抛出 OutOfMemoryError 异常。</li>
-</ul>
-</li>
-<li>Java 虚拟机栈也是线程私有，随着线程创建而创建，随着线程的结束而销毁。</li>
-</ul>
-<blockquote>
-<p>出现 StackOverFlowError 时，内存空间可能还有很多。</p>
-</blockquote>
-<h2 id="本地方法栈（C-栈）"><a href="#本地方法栈（C-栈）" class="headerlink" title="本地方法栈（C 栈）"></a>本地方法栈（C 栈）</h2><h3 id="本地方法栈的定义"><a href="#本地方法栈的定义" class="headerlink" title="本地方法栈的定义"></a>本地方法栈的定义</h3><p>本地方法栈是为 JVM 运行 Native 方法准备的空间，由于很多 Native 方法都是用 C 语言实现的，所以它通常又叫 C 栈。它与 Java 虚拟机栈实现的功能类似，只不过本地方法栈是描述本地方法运行过程的内存模型。</p>
-<h3 id="栈帧变化过程"><a href="#栈帧变化过程" class="headerlink" title="栈帧变化过程"></a>栈帧变化过程</h3><p>本地方法被执行时，在本地方法栈也会创建一块栈帧，用于存放该方法的局部变量表、操作数栈、动态链接、方法出口信息等。</p>
-<p>方法执行结束后，相应的栈帧也会出栈，并释放内存空间。也会抛出 StackOverFlowError 和 OutOfMemoryError 异常。</p>
-<blockquote>
-<p>如果 Java 虚拟机本身不支持 Native 方法，或是本身不依赖于传统栈，那么可以不提供本地方法栈。如果支持本地方法栈，那么这个栈一般会在线程创建的时候按线程分配。</p>
-<p>在 HotSpot 虚拟机中本地方法栈和 Java 虚拟机栈合二为一。</p>
-</blockquote>
-<h2 id="堆"><a href="#堆" class="headerlink" title="堆"></a>堆</h2><h3 id="堆的定义"><a href="#堆的定义" class="headerlink" title="堆的定义"></a>堆的定义</h3><p>堆是用来存放对象的内存空间，几乎所有的对象都存储在堆中。</p>
-<h3 id="堆的特点"><a href="#堆的特点" class="headerlink" title="堆的特点"></a>堆的特点</h3><ul>
-<li>线程共享，整个 Java 虚拟机只有一个堆，所有的线程都访问同一个堆。而程序计数器、Java 虚拟机栈、本地方法栈都是一个线程对应一个。</li>
-<li>在虚拟机启动时创建。</li>
-<li>是垃圾回收的主要场所。</li>
-<li>从分配内存的角度，可划分出多个线程私有的分配缓冲区(TLAB)，提升对象分配时的效率。</li>
-<li>从回收内存、分代收集理论的角度，可分为：新生代(Eden区  From Survior  To Survivor)、老年代。</li>
-</ul>
-<p>不同的区域存放不同生命周期的对象，这样可以根据不同的区域使用不同的垃圾回收算法，更具有针对性。</p>
-<p>堆的大小既可以固定也可以扩展，但对于主流的虚拟机，堆的大小是可扩展的，因此当线程请求分配内存，但堆已满，且内存已无法再扩展时，就抛出 OutOfMemoryError 异常。</p>
-<blockquote>
-<p>Java 堆所使用的内存不需要保证是连续的。而由于堆是被所有线程共享的，所以对它的访问需要注意同步问题，方法和对应的属性都需要保证一致性。</p>
-<p>可以通过参数-Xmx和-Xms设定实现堆大小的扩展，相等即不可扩展。</p>
-</blockquote>
-<h2 id="方法区"><a href="#方法区" class="headerlink" title="方法区"></a>方法区</h2><h3 id="方法区的定义"><a href="#方法区的定义" class="headerlink" title="方法区的定义"></a>方法区的定义</h3><p>Java 虚拟机规范中定义方法区是堆的一个<u>逻辑</u>部分。永久代和元空间只是对其的不同实现。</p>
-<p>方法区存放以下信息：  </p>
-<ul>
-<li>已经被虚拟机加载的类信息</li>
-<li>常量</li>
-<li>静态变量</li>
-<li>即时编译器编译后的代码缓存</li>
-<li>……</li>
-</ul>
-<h3 id="方法区的特点"><a href="#方法区的特点" class="headerlink" title="方法区的特点"></a>方法区的特点</h3><ul>
-<li>线程共享。  方法区是堆的一个逻辑部分，因此和堆一样，都是线程共享的。整个虚拟机中只有一个方法区。</li>
-<li>内存回收效率低。  方法区中的信息一般需要长期存在，回收一遍之后可能只有少量信息无效。主要回收目标是：对常量池的回收；对类型的卸载。</li>
-<li>Java 虚拟机规范对方法区的要求比较宽松。  和堆一样，允许固定大小，也允许动态扩展，还允许不实现垃圾回收。</li>
-</ul>
-<h3 id="方法区的变迁"><a href="#方法区的变迁" class="headerlink" title="方法区的变迁"></a>方法区的变迁</h3><ul>
-<li><p>永久代。  方法区的实现。因此在JDK 6及以前，hotspot虚拟机用堆的划分方法，将堆中的一部分空间划给方法区使用，由此方法区称为“永久代”。在JDK 7中已经式微，但还存在；JDK 8删除。</p>
-</li>
-<li><p>元空间。  方法区的实现。在本地内存中开辟的新空间，hotspot虚拟机在JDK 8中对方法区的新实现。</p>
-</li>
-<li><p>在 JDK 6及以前，方法区中包含的数据，除了JIT编译生成的代码存放在本地内存的代码缓存区域，其他都存放在永久代。</p>
-</li>
-<li><p>在 JDK 7中，把原本放在永久代的字符串常量池、静态变量等移出，放在普通堆内存中。</p>
-</li>
-<li><p>在 JDK 8中，将JDK 7中永久代还剩余的内容(主要是类型信息)全部移到元空间中，永久代废除，相当于永久代的数据被分到了堆和元空间中。</p>
-</li>
-<li><p>从 JDK 8开始，元空间存储类的元信息、运行时常量池等，堆中存储静态变量和常量池等。永久代废除。</p>
-</li>
-</ul>
-<h3 id="运行时常量池"><a href="#运行时常量池" class="headerlink" title="运行时常量池"></a>运行时常量池</h3><p>运行时常量池是方法区的一部分。</p>
-<p>Class文件中除了有类的版本、字段、方法、接口等描述信息外，还有一项信息是常量池表，用于存放编译期生成的各种字面量与符号引用，这部分内容将在类加载后存放到方法区的运行时常量池中。</p>
-<p>方法区中存放：类信息、常量、静态变量、即时编译器编译后的代码。常量就存放在运行时常量池中。</p>
-<p>当类被 Java 虚拟机加载后， .class 文件中的常量就存放在方法区的运行时常量池中。而且在运行期间，可以向常量池中添加新的常量。如 String 类的 intern() 方法就能在运行期间向常量池中添加字符串常量。</p>
-<p>既然运行时常量池是方法区的一部分，自然受到方法区内存的限制，当常量池无法再申请到内存时会抛出OutOfMemoryError异常。</p>
-<h2 id="直接内存"><a href="#直接内存" class="headerlink" title="直接内存"></a>直接内存</h2><p>直接内存是除 Java 虚拟机之外的内存，但也可能被 Java 使用。</p>
-<h3 id="操作直接内存"><a href="#操作直接内存" class="headerlink" title="操作直接内存"></a>操作直接内存</h3><p>在 NIO 中引入了一种基于通道和缓冲的 IO 方式。它可以通过调用本地方法直接分配 Java 虚拟机之外的内存，然后通过一个存储在堆中的<code>DirectByteBuffer</code>对象直接操作该内存，而无须先将外部内存中的数据复制到堆中再进行操作，从而提高了数据操作的效率。</p>
-<p>直接内存的大小不受 Java 虚拟机控制，但既然是内存，当内存不足时就会抛出 OutOfMemoryError 异常。</p>
-<h3 id="直接内存与堆内存比较"><a href="#直接内存与堆内存比较" class="headerlink" title="直接内存与堆内存比较"></a>直接内存与堆内存比较</h3><ul>
-<li>直接内存申请空间耗费更高的性能</li>
-<li>直接内存读取 IO 的性能要优于普通的堆内存。</li>
-<li>直接内存作用链： 本地 IO -&gt; 直接内存 -&gt; 本地 IO</li>
-<li>堆内存作用链：本地 IO -&gt; 直接内存 -&gt; 非直接内存 -&gt; 直接内存 -&gt; 本地 IO</li>
-</ul>
-<blockquote>
-<p>服务器管理员在配置虚拟机参数时，会根据实际内存设置<code>-Xmx</code>等参数信息，但经常忽略直接内存，使得各个内存区域总和大于物理内存限制，从而导致动态扩展时出现<code>OutOfMemoryError</code>异常。</p>
-</blockquote>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
@@ -474,10 +177,9 @@
       <meta itemprop="name" content="Seif Zheng's blog">
     </span>
       <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2020/07/06/redis%E7%9A%84%E5%AE%89%E8%A3%85%E4%B8%8E%E4%BD%BF%E7%94%A8/" class="post-title-link" itemprop="url">redis的安装与使用</a>
-        </h2>
+        <h1 class="post-title" itemprop="name headline">
+          redis的安装与使用
+        </h1>
 
         <div class="post-meta">
             <span class="post-meta-item">
@@ -507,7 +209,7 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h2 id="redis"><a href="#redis" class="headerlink" title="redis"></a>redis</h2><h3 id="redis的安装和配置"><a href="#redis的安装和配置" class="headerlink" title="redis的安装和配置"></a>redis的安装和配置</h3><ol>
+        <h2 id="redis"><a href="#redis" class="headerlink" title="redis"></a>redis</h2><h3 id="redis的安装和配置"><a href="#redis的安装和配置" class="headerlink" title="redis的安装和配置"></a>redis的安装和配置</h3><ol>
 <li><p>到官方网站下载最新稳定版的redis压缩包</p>
 </li>
 <li><p>上传到/home/software</p>
@@ -707,305 +409,37 @@
 <p>最低限度下， 你应该在文件传送完毕之后， 检查所传送备份文件的体积和原始快照文件的体积是否相同。 如果你使用的是 VPS ， 那么还可以通过比对文件的 SHA1 校验和来确认文件是否传送完整。</p>
 <p>另外， 你还需要一个独立的警报系统， 让它在负责传送备份文件的传送器（transfer）失灵时通知你。</p>
 
-      
     </div>
 
     
     
     
+
       <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
+          <div class="post-tags">
+              <a href="/tags/redis/" rel="tag"># redis</a>
+          </div>
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="http://fatefrank.github.io/2020/06/23/nginx%E7%9A%84%E5%AE%89%E8%A3%85%E4%B8%8E%E4%BD%BF%E7%94%A8/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Seif Zheng">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Seif Zheng's blog">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2020/06/23/nginx%E7%9A%84%E5%AE%89%E8%A3%85%E4%B8%8E%E4%BD%BF%E7%94%A8/" class="post-title-link" itemprop="url">nginx的安装与使用</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-06-23 00:00:00" itemprop="dateCreated datePublished" datetime="2020-06-23T00:00:00+08:00">2020-06-23</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-08-04 15:48:47" itemprop="dateModified" datetime="2020-08-04T15:48:47+08:00">2020-08-04</time>
-              </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h2 id="nginx"><a href="#nginx" class="headerlink" title="nginx"></a>nginx</h2><h3 id="nginx的安装和运行"><a href="#nginx的安装和运行" class="headerlink" title="nginx的安装和运行"></a>nginx的安装和运行</h3><ol>
-<li><p>去官网<a target="_blank" rel="noopener" href="http://nginx.org/%E4%B8%8B%E8%BD%BD%E5%AF%B9%E5%BA%94%E7%9A%84nginx%E5%8C%85%EF%BC%8C%E6%8E%A8%E8%8D%90%E4%BD%BF%E7%94%A8%E7%A8%B3%E5%AE%9A%E7%89%88">http://nginx.org/下载对应的nginx包，推荐使用稳定版</a></p>
-</li>
-<li><p>上传nginx到系统的 /home/software</p>
-</li>
-<li><p>安装依赖环境</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 安装gcc库</span></span><br><span class="line">yum install gcc-c++</span><br><span class="line"><span class="meta">#</span><span class="bash"> 安装PCRE库，用于解析正则表达式</span></span><br><span class="line">yum install -y pcre pcre-devel</span><br><span class="line"><span class="meta">#</span><span class="bash"> 安装zlib压缩和解压缩依赖</span></span><br><span class="line">yum install -y zlib zlib-devel</span><br><span class="line"><span class="meta">#</span><span class="bash"> SSL安全的加密的套接字协议层，用于HTTP安全传输，也就是https</span></span><br><span class="line">yum install -y openssl spenssl-devel</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>解压nginx安装包，需要注意，解压得到是nginx源码，源码需要编译之后才能安装</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">tar -zxvf nginx-1.16.1.tar.gz</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>编译之前，先创建nginx临时目录；如果不创建，在启动nginx的过程中会报错</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">mkdir &#x2F;var&#x2F;temp&#x2F;nginx -p</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>在nginx目录，输入以下命令创建makefile文件</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">./configure \</span><br><span class="line">--prefix=/usr/local/nginx \</span><br><span class="line">--pid-path=/var/run/nginx/nginx.pid \</span><br><span class="line">--lock-path=/var/lock/nginx.lock \</span><br><span class="line">--error-log-path=/var/log/nginx/error.log \</span><br><span class="line">--http-log-path=/var/log/nginx/access.log \</span><br><span class="line">--with-http_gzip_static_module \</span><br><span class="line">--http-client-body-temp-path=/var/temp/nginx/client \</span><br><span class="line">--http-proxy-temp-path=/var/temp/nginx/proxy \</span><br><span class="line">--http-fastcgi-temp-path=/var/temp/nginx/fastcgi \</span><br><span class="line">--http-uwsgi-temp-path=/var/temp/nginx/uwsgi \</span><br><span class="line">--http-scgi-temp-path=/var/temp/nginx/scgi</span><br></pre></td></tr></table></figure>
-
-<p>注：\代表命令行中换行，提高可读性</p>
-<p>配置命令：</p>
-<table>
-<thead>
-<tr>
-<th align="left">参数</th>
-<th>描述</th>
-</tr>
-</thead>
-<tbody><tr>
-<td align="left">–prefix</td>
-<td>指定nginx安装目录</td>
-</tr>
-<tr>
-<td align="left">–pid-path</td>
-<td>指向nginx的pid</td>
-</tr>
-<tr>
-<td align="left">–lock-path</td>
-<td>锁定安装文件，防止被恶意篡改或误操作</td>
-</tr>
-<tr>
-<td align="left">–error-log-path</td>
-<td>错误日志</td>
-</tr>
-<tr>
-<td align="left">–http-log-path</td>
-<td>http日志</td>
-</tr>
-<tr>
-<td align="left">–with-http_gzip_static_module</td>
-<td>启用gzip模块，在线实时压缩输出数据流</td>
-</tr>
-<tr>
-<td align="left">–http-client-body-temp-path</td>
-<td>设定客户端请求的临时目录</td>
-</tr>
-<tr>
-<td align="left">–http-proxy-temp-path</td>
-<td>设定http代理临时目录</td>
-</tr>
-<tr>
-<td align="left">–http-fastcgi-temp-path</td>
-<td>设定fastcgi临时目录</td>
-</tr>
-<tr>
-<td align="left">–http-uwsgi-temp-path</td>
-<td>设定uwsgi临时目录</td>
-</tr>
-<tr>
-<td align="left">–http-scgi-temp-path</td>
-<td>设定scgi临时目录</td>
-</tr>
-</tbody></table>
-</li>
-<li><p>make编译</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">make</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>安装</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">make install</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>进入sbin目录启动nginx</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">./nginx</span><br><span class="line">./nginx -s stop            // 停止</span><br><span class="line">./nginx -s reload        // 重新加载</span><br></pre></td></tr></table></figure>
-
-</li>
-</ol>
-<p><strong>注意事项：</strong></p>
-<ol>
-<li><p>如果在云服务器安装，需要开启默认的nginx端口：80</p>
-</li>
-<li><p>如果在虚拟机安装，需要关闭防火墙</p>
-</li>
-<li><p>本地win或mac需要关闭防火墙</p>
-</li>
-</ol>
-<h3 id="nginx的进程模型"><a href="#nginx的进程模型" class="headerlink" title="nginx的进程模型"></a>nginx的进程模型</h3><p>​        nginx在启动后，在unix系统中会以daemon的方式在后台运行，后台进程包含一个master进程和多个worker进程。我们也可以手动地关掉后台模式，让nginx在前台运行，并且通过配置让nginx取消master进程，从而可以使nginx以单进程方式运行。很显然，生产环境下我们肯定不会这么做，所以关闭后台模式，一般是用来调试用的，在后面的章节里面，我们会详细地讲解如何调试nginx。所以，我们可以看到，nginx是以<strong>多进程</strong>的方式来工作的，当然nginx也是支持多线程的方式的，只是我们主流的方式还是<strong>多进程</strong>的方式，也是<strong>nginx的默认方式</strong>。nginx采用多进程的方式有诸多好处，所以我就主要讲解nginx的多进程模式吧。</p>
-<p>​        刚才讲到，nginx在启动后，会有一个master进程和多个worker进程。master进程主要用来管理worker进程，包含：接收来自外界的信号，向各worker进程发送信号，监控worker进程的运行状态，当worker进程退出后(异常情况下)，会自动重新启动新的worker进程。而基本的网络事件，则是放在worker进程中来处理了。多个worker进程之间是对等的，他们同等竞争来自客户端的请求，各进程互相之间是独立的。一个请求，只可能在一个worker进程中处理，一个worker进程，不可能处理其它进程的请求。worker进程的个数是可以设置的，一般我们会设置与机器cpu核数一致，这里面的原因与nginx的进程模型以及事件处理模型是分不开的。nginx的进程模型，可以由下图来表示：</p>
-<p>​        在nginx启动后，如果我们要操作nginx，要怎么做呢？从上文中我们可以看到，master来管理worker进程，所以我们只需要与master进程通信就行了。master进程会接收来自外界发来的信号，再根据信号做不同的事情。所以我们要控制nginx，只需要通过kill向master进程发送信号就行了。比如kill -HUP pid，则是告诉nginx，从容地重启nginx，我们一般用这个信号来重启nginx，或重新加载配置，因为是从容地重启，因此服务是不中断的。master进程在接收到HUP信号后是怎么做的呢？首先master进程在接到信号后，会先重新加载配置文件，然后再启动新的worker进程，并向所有老的worker进程发送信号，告诉他们可以光荣退休了。新的worker在启动后，就开始接收新的请求，而老的worker在收到来自master的信号后，就不再接收新的请求，并且在当前进程中的所有未处理完的请求处理完成后，再退出。当然，直接给master进程发送信号，这是比较老的操作方式，nginx在0.8版本之后，引入了一系列命令行参数，来方便我们管理。比如，./nginx -s reload，就是来重启nginx，./nginx -s stop，就是来停止nginx的运行。如何做到的呢？我们还是拿reload来说，我们看到，执行命令时，我们是启动一个新的nginx进程，而新的nginx进程在解析到reload参数后，就知道我们的目的是控制nginx来重新加载配置文件了，它会向master进程发送信号，然后接下来的动作，就和我们直接向master进程发送信号一样了。</p>
-<p>​        现在，我们知道了当我们在操作nginx的时候，nginx内部做了些什么事情，那么，worker进程又是如何处理请求的呢？我们前面有提到，worker进程之间是平等的，每个进程，处理请求的机会也是一样的。当我们提供80端口的http服务时，一个连接请求过来，每个进程都有可能处理这个连接，怎么做到的呢？首先，每个worker进程都是从master进程fork过来，在master进程里面，先建立好需要listen的socket（listenfd）之后，然后再fork出多个worker进程。所有worker进程的listenfd会在新连接到来时变得可读，为保证只有一个进程处理该连接，所有worker进程在注册listenfd读事件前抢accept_mutex，抢到互斥锁的那个进程注册listenfd读事件，在读事件里调用accept接受该连接。当一个worker进程在accept这个连接之后，就开始读取请求，解析请求，处理请求，产生数据后，再返回给客户端，最后才断开连接，这样一个完整的请求就是这样的了。我们可以看到，一个请求，完全由worker进程来处理，而且只在一个worker进程中处理。</p>
-<p>​        整理一下就是：</p>
-<p>​        1）每个worker进程都是从master进程fork过来，在master进程里面，先建立好需要listen的    socket（listenfd）之后，然后再fork出多个worker进程。</p>
-<p>​        2）新连接到来，所有worker进程的listenfd会变得可读，为保证只有一个进程处理该连接</p>
-<p>​        3）所有worker进程在抢accept_mutex（互斥锁），即竞争</p>
-<p>​        4）抢到互斥锁的那个worker进程注册listenfd读事件</p>
-<p>​        5）竞争成功的worker进程在读事件里调用accept接受该连接</p>
-<p>​        6）竞争成功的worker进程读取请求，解析请求，处理请求，产生数据后，再返回给客户端，最后才断开连接</p>
-<p>​        那么，nginx采用这种进程模型有什么好处呢？当然，好处肯定会很多了。首先，对于每个worker进程来说，独立的进程，不需要加锁，所以省掉了锁带来的开销，同时在编程以及问题查找时，也会方便很多。其次，采用独立的进程，可以让互相之间不会影响，一个进程退出后，其它进程还在工作，服务不会中断，master进程则很快启动新的worker进程。当然，worker进程的异常退出，肯定是程序有bug了，异常退出，会导致当前worker上的所有请求失败，不过不会影响到所有请求，所以降低了风险。当然，好处还有很多，大家可以慢慢体会。</p>
-<p>​        上面讲了很多关于nginx的进程模型，接下来，我们来看看nginx是如何处理事件的。</p>
-<p>​        有人可能要问了，nginx采用多worker的方式来处理请求，每个worker里面只有一个主线程，那能够处理的并发数很有限啊，多少个worker就能处理多少个并发，何来高并发呢？非也，这就是nginx的高明之处，nginx采用了<strong>异步非阻塞</strong>的方式来处理请求，也就是说，nginx是可以同时处理成千上万个请求的。想想apache的常用工作方式（apache也有异步非阻塞版本，但因其与自带某些模块冲突，所以不常用），每个请求会独占一个工作线程，当并发数上到几千时，就同时有几千的线程在处理请求了。这对操作系统来说，是个不小的挑战，线程带来的内存占用非常大，线程的上下文切换带来的cpu开销很大，自然性能就上不去了，而这些开销完全是没有意义的。</p>
-<p>​        为什么nginx可以采用异步非阻塞的方式来处理呢，或者异步非阻塞到底是怎么回事呢？我们先回到原点，看看一个请求的完整过程。首先，请求过来，要建立连接，然后再接收数据，接收数据后，再发送数据。具体到系统底层，就是读写事件，而当读写事件没有准备好时，必然不可操作，如果不用非阻塞的方式来调用，那就得阻塞调用了，事件没有准备好，那就只能等了，等事件准备好了，你再继续吧。阻塞调用会进入内核等待，cpu就会让出去给别人用了，对单线程的worker来说，显然不合适，当网络事件越多时，大家都在等待呢，cpu空闲下来没人用，cpu利用率自然上不去了，更别谈高并发了。好吧，你说加进程数，这跟apache的线程模型有什么区别，注意，别增加无谓的上下文切换。所以，在nginx里面，最忌讳阻塞的系统调用了。不要阻塞，那就非阻塞喽。非阻塞就是，事件没有准备好，马上返回EAGAIN，告诉你，事件还没准备好呢，你慌什么，过会再来吧。好吧，你过一会，再来检查一下事件，直到事件准备好了为止，在这期间，你就可以先去做其它事情，然后再来看看事件好了没。虽然不阻塞了，但你得不时地过来检查一下事件的状态，你可以做更多的事情了，但带来的开销也是不小的。所以，才会有了<strong>异步非阻塞的事件处理机制</strong>，具体到系统调用就是像select/poll/epoll/kqueue这样的系统调用。<u>它们提供了一种机制，让你可以同时监控多个事件，调用他们是阻塞的，但可以设置超时时间，在超时时间之内，如果有事件准备好了，就返回。</u>这种机制正好解决了我们上面的两个问题，拿epoll为例(在后面的例子中，我们多以epoll为例子，以代表这一类函数)，<u>当事件没准备好时，放到epoll(每个worker进程独有)里面，事件准备好了，我们就去读写，当读写返回EAGAIN时，我们将它再次加入到epoll里面。这样，只要有事件准备好了，我们就去处理它，只有当所有事件都没准备好时，才在epoll里面等着。</u><u>这样，我们就可以并发处理大量的并发了，当然，这里的并发请求，是指未处理完的请求，线程只有一个，所以同时能处理的请求当然只有一个了，只是在请求间进行不断地切换而已，切换也是因为异步事件未准备好，而主动让出的。这里的切换是没有任何代价，你可以理解为循环处理多个准备好的事件，事实上就是这样的。</u>与多线程相比，这种事件处理方式是有很大的优势的，不需要创建线程，每个请求占用的内存也很少，没有上下文切换，事件处理非常的轻量级。并发数再多也不会导致无谓的资源浪费（上下文切换）。更多的并发数，只是会占用更多的内存而已。 我之前有对连接数进行过测试，在24G内存的机器上，处理的并发请求数达到过200万。现在的网络服务器基本都采用这种方式，这也是nginx性能高效的主要原因。</p>
-<p>​        我们之前说过，推荐设置worker的个数为cpu的核数，在这里就很容易理解了，更多的worker数，只会导致进程来竞争cpu资源了，从而带来不必要的上下文切换。而且，nginx为了更好的利用多核特性，提供了cpu亲缘性的绑定选项，我们可以将某一个进程绑定在某一个核上，这样就不会因为进程的切换带来cache的失效。像这种小的优化在nginx中非常常见，同时也说明了nginx作者的苦心孤诣。比如，nginx在做4个字节的字符串比较时，会将4个字符转换成一个int型，再作比较，以减少cpu的指令数等等。</p>
-<p>​        现在，知道了nginx为什么会选择这样的进程模型与事件模型了。</p>
-<h3 id="nginx-conf核心配置文件"><a href="#nginx-conf核心配置文件" class="headerlink" title="nginx.conf核心配置文件"></a>nginx.conf核心配置文件</h3><ol>
-<li><p>设置worker进程的用户，指的是linux的用户，会涉及到nginx操作目录或文件的一些权限，默认为nobody</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">user boot;</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>worker进程工作数设置，一般来说cpu有几个，就设置几个，或者设置N-1也行</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">worker_processes 1;</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>nginx日志级别 debug | info | notice | warn | error | crit | alert | emerg，错误级别从左到右越来越大</p>
-</li>
-<li><p>设置nginx进程 pid</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">pid     logs/nginx.pid;</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>设置工作模式</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">events &#123;</span><br><span class="line"><span class="meta">    #</span><span class="bash"> 默认使用epoll</span></span><br><span class="line">    use epoll;</span><br><span class="line"><span class="meta">    #</span><span class="bash"> 每个worker允许连接的客户端最大连接数</span></span><br><span class="line">    worker_connections 10240;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>http 是指令块，针对http网络传输的一些指令配置</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">http &#123;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>include 引入外部配置，提高可读性，避免单个配置文件过大</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">include     mine.types;</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>设定日志格式，main为定义的格式名称，如此access_log就可以直接使用这个变量了</p>
-<table>
-<thead>
-<tr>
-<th>参数名</th>
-<th>参数意义</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>$remote_addr</td>
-<td>客户端ip</td>
-</tr>
-<tr>
-<td>$remote_user</td>
-<td>远程客户端用户名，一般为：‘-’</td>
-</tr>
-<tr>
-<td>$time_local</td>
-<td>时间和时区</td>
-</tr>
-<tr>
-<td>$request</td>
-<td>请求的url及method</td>
-</tr>
-<tr>
-<td>$status</td>
-<td>响应状态码</td>
-</tr>
-<tr>
-<td>$body_bytes_sent</td>
-<td>响应客户端内容字节数</td>
-</tr>
-<tr>
-<td>$http_referer</td>
-<td>记录用户从哪个链接跳转过来的</td>
-</tr>
-<tr>
-<td>$http_user_agent</td>
-<td>用户所使用的代理，一般来时都是浏览器</td>
-</tr>
-<tr>
-<td>$http_x_forwarded_for</td>
-<td>通过代理服务器来记录客户端的ip</td>
-</tr>
-</tbody></table>
-</li>
-<li><p>sendfile使用高效文件传输，提升传输性能。启用后才能使用tcp_nopush，是指当数据表累积一定大小后才发送，提高了效率</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">sendfile    on;</span><br><span class="line">tcp_nopush    on;</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>keepalive_timeout 设置客户端与服务端请求的超时时间，保证客户端多次请求的时候不会建立新的连接，节约资源损耗。</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash">keepalive_timeout     0;</span></span><br><span class="line">keepalive_timeout 65;</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>gzip启用压缩，html/js/css压缩后传输会更快，但也会增加cpu负担</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gzip    on;</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>server 可以在http指令块设置多个虚拟主机</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">server &#123;</span><br><span class="line">    listen        88;                        # 监听端口</span><br><span class="line">    server_name    localhost;                # ip，域名</span><br><span class="line">    </span><br><span class="line">    location / &#123;                        # 请求路由映射，匹配拦截</span><br><span class="line">        root    html;                    # 请求位置</span><br><span class="line">        index    index.html    index.htm;    # 首页位置</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+        
 
 
-
-</li>
-</ol>
-<h3 id="nginx日志切割"><a href="#nginx日志切割" class="headerlink" title="nginx日志切割"></a>nginx日志切割</h3><p>​        现有的日志都保存在access.log中，随着时间的推移，文件越来越大，不利于查看。可以以天为单位，把大日志文件切分成多个小日志文件。如果每天的日志量很大，可以切分地更细。</p>
-<ol>
-<li><p>创建一个shell可执行文件：/usr/local/nginx/sbin/cut_my_log.sh，内容为：</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash">!/bin/bash</span></span><br><span class="line">LOG_PATH=&quot;/var/log/nginx/&quot;</span><br><span class="line">RECORD_TIME=$(date -d &quot;yesterday&quot; +%Y-%m-%d+%H:%M)</span><br><span class="line">PID=/var/run/nginx/nginx.pid</span><br><span class="line"><span class="meta">#</span><span class="bash">重命名nginx的日志文件</span></span><br><span class="line">mv $&#123;LOG_PATH&#125;/access.log $&#123;LOG_PATH&#125;/access.$&#123;RECORD_TIME&#125;.log</span><br><span class="line">mv $&#123;LOG_PATH&#125;/error.log $&#123;LOG_PATH&#125;/error.$&#123;RECORD_TIME&#125;.log</span><br><span class="line"><span class="meta">#</span><span class="bash">向nginx主进程发送信号, 用于重新打开日志文件</span></span><br><span class="line">kill -USR1 `cat $PID`</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>为cut_my_log.sh添加可执行的权限：</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">chmod +x cut_my_log.sh</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>测试日志切割后的结果</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./cut_my_log.sh</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>安装定时任务</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">yum install crontabs</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>crontab -e 编辑并且添加一行新的定时任务</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 每日的23点59分执行切割日志的脚本</span></span><br><span class="line">59 23 * * * /usr/local/nginx/sbin/cut_nginx_log.sh</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>重启定时任务</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">service crond restart</span><br></pre></td></tr></table></figure>
-
-
-
-</li>
-</ol>
-
-      
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2020/06/23/nginx%E7%9A%84%E5%AE%89%E8%A3%85%E4%B8%8E%E4%BD%BF%E7%94%A8/" rel="prev" title="nginx的安装与使用">
+      <i class="fa fa-chevron-left"></i> nginx的安装与使用
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2020/07/12/01-jvm-memory-structure/" rel="next" title="JVM 系列(一) - JVM 内存结构">
+      JVM 系列(一) - JVM 内存结构 <i class="fa fa-chevron-right"></i>
+    </a></div>
     </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
       </footer>
+    
   </article>
   
   
   
-
-
-  
-  <nav class="pagination">
-    <a class="extend prev" rel="prev" href="/"><i class="fa fa-angle-left" aria-label="上一页"></i></a><a class="page-number" href="/">1</a><span class="page-number current">2</span>
-  </nav>
 
 
 
@@ -1057,6 +491,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#redis"><span class="nav-number">1.</span> <span class="nav-text">redis</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#redis%E7%9A%84%E5%AE%89%E8%A3%85%E5%92%8C%E9%85%8D%E7%BD%AE"><span class="nav-number">1.1.</span> <span class="nav-text">redis的安装和配置</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#redis%E7%9A%84%E5%B8%B8%E7%94%A8%E5%AE%A2%E6%88%B7%E7%AB%AF%E5%91%BD%E4%BB%A4"><span class="nav-number">1.2.</span> <span class="nav-text">redis的常用客户端命令</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#redis%E6%95%B4%E5%90%88%E8%BF%9BSpringBoot"><span class="nav-number">1.3.</span> <span class="nav-text">redis整合进SpringBoot</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#redis%E7%9A%84%E5%8F%91%E5%B8%83%E5%92%8C%E8%AE%A2%E9%98%85"><span class="nav-number">1.4.</span> <span class="nav-text">redis的发布和订阅</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#redis%E7%9A%84%E6%8C%81%E4%B9%85%E5%8C%96%E6%9C%BA%E5%88%B6"><span class="nav-number">1.5.</span> <span class="nav-text">redis的持久化机制</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#RDB-%E7%9A%84%E4%BC%98%E7%82%B9"><span class="nav-number">1.5.1.</span> <span class="nav-text">RDB 的优点</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#RDB-%E7%9A%84%E7%BC%BA%E7%82%B9"><span class="nav-number">1.5.2.</span> <span class="nav-text">RDB 的缺点</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#AOF-%E7%9A%84%E4%BC%98%E7%82%B9"><span class="nav-number">1.5.3.</span> <span class="nav-text">AOF 的优点</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#AOF-%E7%9A%84%E7%BC%BA%E7%82%B9"><span class="nav-number">1.5.4.</span> <span class="nav-text">AOF 的缺点</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#RDB-%E5%92%8C-AOF-%EF%BC%8C%E6%88%91%E5%BA%94%E8%AF%A5%E7%94%A8%E5%93%AA%E4%B8%80%E4%B8%AA%EF%BC%9F"><span class="nav-number">1.5.5.</span> <span class="nav-text">RDB 和 AOF ，我应该用哪一个？</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%BF%AB%E7%85%A7%E7%9A%84%E8%BF%90%E4%BD%9C%E6%96%B9%E5%BC%8F"><span class="nav-number">1.5.6.</span> <span class="nav-text">快照的运作方式</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%8F%AA%E8%BF%9B%E8%A1%8C%E8%BF%BD%E5%8A%A0%E6%93%8D%E4%BD%9C%E7%9A%84%E6%96%87%E4%BB%B6%EF%BC%88append-only-file%EF%BC%8CAOF%EF%BC%89"><span class="nav-number">1.5.7.</span> <span class="nav-text">只进行追加操作的文件（append-only file，AOF）</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#AOF-%E9%87%8D%E5%86%99"><span class="nav-number">1.5.8.</span> <span class="nav-text">AOF 重写</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#AOF-%E7%9A%84%E8%80%90%E4%B9%85%E6%80%A7%E5%A6%82%E4%BD%95%EF%BC%9F"><span class="nav-number">1.5.9.</span> <span class="nav-text">AOF 的耐久性如何？</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%A6%82%E6%9E%9C-AOF-%E6%96%87%E4%BB%B6%E5%87%BA%E9%94%99%E4%BA%86%EF%BC%8C%E6%80%8E%E4%B9%88%E5%8A%9E%EF%BC%9F"><span class="nav-number">1.5.10.</span> <span class="nav-text">如果 AOF 文件出错了，怎么办？</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#AOF-%E7%9A%84%E8%BF%90%E4%BD%9C%E6%96%B9%E5%BC%8F"><span class="nav-number">1.5.11.</span> <span class="nav-text">AOF 的运作方式</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%80%8E%E4%B9%88%E4%BB%8E-RDB-%E6%8C%81%E4%B9%85%E5%8C%96%E5%88%87%E6%8D%A2%E5%88%B0-AOF-%E6%8C%81%E4%B9%85%E5%8C%96"><span class="nav-number">1.5.12.</span> <span class="nav-text">怎么从 RDB 持久化切换到 AOF 持久化</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#RDB-%E5%92%8C-AOF-%E4%B9%8B%E9%97%B4%E7%9A%84%E7%9B%B8%E4%BA%92%E4%BD%9C%E7%94%A8"><span class="nav-number">1.5.13.</span> <span class="nav-text">RDB 和 AOF 之间的相互作用</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%A4%87%E4%BB%BD-Redis-%E6%95%B0%E6%8D%AE"><span class="nav-number">1.5.14.</span> <span class="nav-text">备份 Redis 数据</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%AE%B9%E7%81%BE%E5%A4%87%E4%BB%BD"><span class="nav-number">1.5.15.</span> <span class="nav-text">容灾备份</span></a></li></ol></li></ol></li></ol></div>
       </div>
       <!--/noindex-->
 
