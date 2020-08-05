@@ -229,6 +229,415 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://fatefrank.github.io/2020/07/26/Java%E3%80%90%E9%9B%86%E5%90%88%E3%80%91%E9%9D%A2%E8%AF%95%E9%A2%98/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Seif Zheng">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Seif Zheng's blog">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2020/07/26/Java%E3%80%90%E9%9B%86%E5%90%88%E3%80%91%E9%9D%A2%E8%AF%95%E9%A2%98/" class="post-title-link" itemprop="url">Java【基础】面试题</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-07-26 00:00:00" itemprop="dateCreated datePublished" datetime="2020-07-26T00:00:00+08:00">2020-07-26</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-08-05 15:24:48" itemprop="dateModified" datetime="2020-08-05T15:24:48+08:00">2020-08-05</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="精尽-Java【集合】面试题"><a href="#精尽-Java【集合】面试题" class="headerlink" title="精尽 Java【集合】面试题"></a>精尽 Java【集合】面试题</h1><h2 id="Java-集合框架有哪些？"><a href="#Java-集合框架有哪些？" class="headerlink" title="Java 集合框架有哪些？"></a>Java 集合框架有哪些？</h2><h3 id="说出一些集合框架的优点？"><a href="#说出一些集合框架的优点？" class="headerlink" title="说出一些集合框架的优点？"></a>说出一些集合框架的优点？</h3><p>集合框架的部分优点如下：</p>
+<ul>
+<li>1、使用核心集合类降低开发成本，而非实现我们自己的集合类。</li>
+<li>2、随着使用经过严格测试的集合框架类，代码质量会得到提高。</li>
+<li>3、通过使用 JDK 附带的集合类，可以降低代码维护成本。</li>
+<li>4、复用性和可操作性。</li>
+</ul>
+<h3 id="集合框架中的泛型有什么优点？"><a href="#集合框架中的泛型有什么优点？" class="headerlink" title="集合框架中的泛型有什么优点？"></a>集合框架中的泛型有什么优点？</h3><p>Java5 引入了泛型，所有的集合接口和实现都大量地使用它。泛型允许我们为集合提供一个可以容纳的对象类型。因此，如果你添加其它类型的任何元素，它会在编译时报错。这避免了在运行时出现 ClassCastException，因为你将会在编译时得到报错信息。</p>
+<p>泛型也使得代码整洁，我们不需要使用显式转换和 <code>instanceOf</code> 操作符。它也给运行时带来好处，因为不会产生类型检查的字节码指令。</p>
+<h2 id="Java-集合框架的基础接口有哪些？"><a href="#Java-集合框架的基础接口有哪些？" class="headerlink" title="Java 集合框架的基础接口有哪些？"></a>Java 集合框架的基础接口有哪些？</h2><ul>
+<li>Collection ，为集合层级的根接口。一个集合代表一组对象，这些对象即为它的元素。Java 平台不提供这个接口任何直接的实现。<ul>
+<li>Set ，是一个不能包含重复元素的集合。这个接口对数学集合抽象进行建模，被用来代表集合，就如一副牌。</li>
+<li>List ，是一个有序集合，可以包含重复元素。你可以通过它的索引来访问任何元素。List 更像长度动态变换的数组。</li>
+</ul>
+</li>
+<li>Map ，是一个将 key 映射到 value 的对象。一个 Map 不能包含重复的 key，每个 key 最多只能映射一个 value 。</li>
+<li>一些其它的接口有 Queue、Dequeue、SortedSet、SortedMap 和 ListIterator 。</li>
+</ul>
+<h3 id="为何-Collection-不从-Cloneable-和-Serializable-接口继承？"><a href="#为何-Collection-不从-Cloneable-和-Serializable-接口继承？" class="headerlink" title="为何 Collection 不从 Cloneable 和 Serializable 接口继承？"></a>为何 Collection 不从 Cloneable 和 Serializable 接口继承？</h3><p>Collection 接口指定一组对象，对象即为它的元素。</p>
+<ul>
+<li>如何维护这些元素由 Collection 的具体实现决定。例如，一些如 List 的 Collection 实现允许重复的元素，而其它的如 Set 就不允许。</li>
+<li>很多 Collection 实现有一个公有的 clone 方法。然而，把它放到集合的所有实现中也是没有意义的。这是因为 Collection 是一个抽象表现，重要的是实现。</li>
+</ul>
+<p>当与具体实现打交道的时候，克隆或序列化的语义和含义才发挥作用。所以，具体实现应该决定如何对它进行克隆或序列化，或它是否可以被克隆或序列化。在所有的实现中授权克隆和序列化，最终导致更少的灵活性和更多的限制，<strong>特定的实现应该决定它是否可以被克隆和序列化</strong>。</p>
+<h3 id="为何-Map-接口不继承-Collection-接口？"><a href="#为何-Map-接口不继承-Collection-接口？" class="headerlink" title="为何 Map 接口不继承 Collection 接口？"></a>为何 Map 接口不继承 Collection 接口？</h3><p>尽管 Map 接口和它的实现也是集合框架的一部分，但 Map 不是集合，集合也不是 Map。因此，Map 继承 Collection 毫无意义，反之亦然。</p>
+<p>如果 Map 继承 Collection 接口，那么元素去哪儿？Map 包含 key-value 对，它提供抽取 key 或 value 列表集合( Collection )的方法，但是它不适合“一组对象”规范。</p>
+<h3 id="Collection-和-Collections-的区别？"><a href="#Collection-和-Collections-的区别？" class="headerlink" title="Collection 和 Collections 的区别？"></a>Collection 和 Collections 的区别？</h3><ul>
+<li>Collection ，是集合类的上级接口，继承与他的接口主要有 Set 和List 。</li>
+<li>Collections ，是针对集合类的一个工具类，它提供一系列静态方法实现对各种集合的搜索、排序、线程安全化等操作。</li>
+</ul>
+<h3 id="集合框架里实现的通用算法有哪些？"><a href="#集合框架里实现的通用算法有哪些？" class="headerlink" title="集合框架里实现的通用算法有哪些？"></a>集合框架里实现的通用算法有哪些？</h3><p>Java 集合框架提供常用的算法实现，比如排序和搜索。</p>
+<p>Collections类包含这些方法实现。大部分算法是操作 List 的，但一部分对所有类型的集合都是可用的。部分算法有排序、搜索、混编、最大最小值。</p>
+<h3 id="集合框架底层数据结构总结"><a href="#集合框架底层数据结构总结" class="headerlink" title="集合框架底层数据结构总结"></a>集合框架底层数据结构总结</h3><p>1）List</p>
+<ul>
+<li>ArrayList ：Object 数组。</li>
+<li>Vector ：Object 数组。</li>
+<li>LinkedList ：双向链表(JDK6 之前为循环链表，JDK7 取消了循环)。</li>
+</ul>
+<p>2）Map</p>
+<ul>
+<li>HashMap ：<ul>
+<li>JDK8 之前，HashMap 由数组+链表组成的，数组是HashMap的主体，链表则是主要为了解决哈希冲突而存在的（“拉链法”解决冲突）。</li>
+<li>JDK8 以后，在解决哈希冲突时有了较大的变化，当链表长度大于阈值（默认为 8 ）时，将链表转化为红黑树，以减少搜索时间。</li>
+</ul>
+</li>
+<li>LinkedHashMap ：LinkedHashMap 继承自 HashMap，所以它的底层仍然是基于拉链式散列结构即由数组和链表或红黑树组成。另外，LinkedHashMap 在上面结构的基础上，增加了一条双向链表，使得上面的结构可以保持键值对的插入顺序。同时通过对链表进行相应的操作，实现了访问顺序相关逻辑。详细可以查看：<a target="_blank" rel="noopener" href="https://www.imooc.com/article/22931">《LinkedHashMap 源码详细分析（JDK1.8）》</a> 。</li>
+<li>Hashtable ：数组+链表组成的，数组是 HashMap 的主体，链表则是主要为了解决哈希冲突而存在的。</li>
+<li>TreeMap ：红黑树（自平衡的排序二叉树）。</li>
+</ul>
+<p>3）Set</p>
+<ul>
+<li>HashSet ：无序，唯一，基于 HashMap 实现的，底层采用 HashMap 来保存元素。</li>
+<li>LinkedHashSet ：LinkedHashSet 继承自 HashSet，并且其内部是通过 LinkedHashMap 来实现的。有点类似于我们之前说的LinkedHashMap 其内部是基于 HashMap 实现一样，不过还是有一点点区别的。</li>
+<li>TreeSet ：有序，唯一，红黑树(自平衡的排序二叉树)。</li>
+</ul>
+<h2 id="什么是迭代器-Iterator-？"><a href="#什么是迭代器-Iterator-？" class="headerlink" title="什么是迭代器(Iterator)？"></a>什么是迭代器(Iterator)？</h2><p>Iterator 接口，提供了很多对集合元素进行迭代的方法。每一个集合类都包含了可以返回迭代器实例的迭代方法。迭代器可以在迭代的过程中删除底层集合的元素，但是不可以直接调用集合的 <code>#remove(Object Obj)</code> 方法删除，可以通过迭代器的 <code>#remove()</code> 方法删除。</p>
+<h3 id="Iterator-和-ListIterator-的区别是什么？"><a href="#Iterator-和-ListIterator-的区别是什么？" class="headerlink" title="Iterator 和 ListIterator 的区别是什么？"></a>Iterator 和 ListIterator 的区别是什么？</h3><ul>
+<li>Iterator 可用来遍历 Set 和 List 集合，但是 ListIterator 只能用来遍历 List。</li>
+<li>Iterator 对集合只能是前向遍历，ListIterator 既可以前向也可以后向。</li>
+<li>ListIterator 实现了 Iterator 接口，并包含其他的功能。比如：增加元素，替换元素，获取前一个和后一个元素的索引等等。</li>
+</ul>
+<h3 id="快速失败（fail-fast）和安全失败（fail-safe）的区别是什么？"><a href="#快速失败（fail-fast）和安全失败（fail-safe）的区别是什么？" class="headerlink" title="快速失败（fail-fast）和安全失败（fail-safe）的区别是什么？"></a>快速失败（fail-fast）和安全失败（fail-safe）的区别是什么？</h3><p>差别在于 ConcurrentModification 异常：</p>
+<ul>
+<li>快速失败：当你在迭代一个集合的时候，如果有另一个线程正在修改你正在访问的那个集合时，就会抛出一个 ConcurrentModification 异常。 在 <code>java.util</code> 包下的都是快速失败。</li>
+<li>安全失败：你在迭代的时候会去底层集合做一个拷贝，所以你在修改上层集合的时候是不会受影响的，不会抛出 ConcurrentModification 异常。在 <code>java.util.concurrent</code> 包下的全是安全失败的。</li>
+</ul>
+<h3 id="如何删除-List-中的某个元素？"><a href="#如何删除-List-中的某个元素？" class="headerlink" title="如何删除 List 中的某个元素？"></a>如何删除 List 中的某个元素？</h3><p>有两种方式，分别如下：</p>
+<ul>
+<li>方式一，使用 Iterator ，顺序向下，如果找到元素，则使用 remove 方法进行移除。</li>
+<li>方式二，倒序遍历 List ，如果找到元素，则使用 remove 方法进行移除。</li>
+</ul>
+<p>Enumeration 和 Iterator 接口有什么不同？</p>
+<ul>
+<li>Enumeration 跟 Iterator 相比较快两倍，而且占用更少的内存。</li>
+<li>但是，Iterator 相对于 Enumeration 更安全，因为其他线程不能修改当前迭代器遍历的集合对象。同时，Iterators 允许调用者从底层集合中移除元素，这些 Enumerations 都没法完成。</li>
+</ul>
+<p>对于很多胖友，可能并未使用过 Enumeration 类，所以可以看看 <a target="_blank" rel="noopener" href="http://www.runoob.com/java/java-enumeration-interface.html">《Java Enumeration 接口》</a> 文章。</p>
+<h3 id="为何-Iterator-接口没有具体的实现？"><a href="#为何-Iterator-接口没有具体的实现？" class="headerlink" title="为何 Iterator 接口没有具体的实现？"></a>为何 Iterator 接口没有具体的实现？</h3><p>Iterator 接口，定义了遍历集合的方法，但它的实现则是集合实现类的责任。每个能够返回用于遍历的 Iterator 的集合类都有它自己的 Iterator 实现内部类。</p>
+<p>这就允许集合类去选择迭代器是 fail-fast 还是 fail-safe 的。比如，ArrayList 迭代器是 fail-fast 的，而 CopyOnWriteArrayList 迭代器是 fail-safe 的。</p>
+<h2 id="Comparable-和-Comparator-的区别"><a href="#Comparable-和-Comparator-的区别" class="headerlink" title="Comparable 和 Comparator 的区别?"></a>Comparable 和 Comparator 的区别?</h2><ul>
+<li>Comparable 接口，在 <code>java.lang</code> 包下，用于当前对象和其它对象的比较，所以它有一个 <code>#compareTo(Object obj)</code> 方法用来排序，该方法只有一个参数。</li>
+<li>Comparator 接口，在 <code>java.util</code> 包下，用于传入的两个对象的比较，所以它有一个 <code>#compare(Object obj1, Object obj2)</code> 方法用来排序，该方法有两个参数。</li>
+</ul>
+<p>详细的，可以看看 <a target="_blank" rel="noopener" href="https://blog.csdn.net/whing123/article/details/77851737">《Java 自定义比较器》</a> 文章，重点是如何自己实现 Comparable 和 Comparator 的方法。</p>
+<h3 id="compareTo-方法的返回值表示的意思？"><a href="#compareTo-方法的返回值表示的意思？" class="headerlink" title="compareTo 方法的返回值表示的意思？"></a>compareTo 方法的返回值表示的意思？</h3><ul>
+<li>大于 0 ，表示对象大于参数对象。</li>
+<li>小于 0 ，表示对象小于参数对象</li>
+<li>等于 0 ，表示两者相等。</li>
+</ul>
+<h3 id="如何对-Object-的-List-排序？"><a href="#如何对-Object-的-List-排序？" class="headerlink" title="如何对 Object 的 List 排序？"></a>如何对 Object 的 List 排序？</h3><ul>
+<li>对 <code>Object[]</code> 数组进行排序时，我们可以用 <code>Arrays#sort(...)</code> 方法。</li>
+<li>对 <code>List</code> 数组进行排序时，我们可以用 <code>Collections#sort(...)</code> 方法。</li>
+</ul>
+<h2 id="有哪些关于-Java-集合框架的最佳实践？"><a href="#有哪些关于-Java-集合框架的最佳实践？" class="headerlink" title="有哪些关于 Java 集合框架的最佳实践？"></a>有哪些关于 Java 集合框架的最佳实践？</h2><ul>
+<li>基于应用的需求来选择使用正确类型的集合，这对性能来说是非常重要的。例如，如果元素的大小是固定的，并且知道优先级，我们将会使用一个 Array ，而不是 ArrayList 。</li>
+<li>一些集合类允许我们指定他们的初始容量。因此，如果我们知道存储数据的大概数值，就可以避免重散列或者大小的调整。</li>
+<li>总是使用泛型来保证类型安全，可靠性和健壮性。同时，使用泛型还可以避免运行时的 ClassCastException 异常。</li>
+<li>在 Map 中使用 JDK 提供的不可变类作为一个 key，这样可以避免 hashcode 的实现和我们自定义类的 equals 方法。</li>
+<li>应该依照接口而不是实现来编程。</li>
+<li>返回零长度的集合或者数组，而不是返回一个 <code>null</code> ，这样可以防止底层集合是空的。</li>
+</ul>
+<h2 id="List-和-Set-区别？"><a href="#List-和-Set-区别？" class="headerlink" title="List 和 Set 区别？"></a>List 和 Set 区别？</h2><p>List，Set 都是继承自 Collection 接口。</p>
+<ul>
+<li>List 特点：元素有放入顺序，元素可重复。</li>
+<li>Set 特点：元素无放入顺序，元素不可重复，重复元素会覆盖掉。</li>
+</ul>
+<blockquote>
+<p>注意：元素虽然无放入顺序，但是元素在 Set 中的位置是有该元素的 hashcode 决定的，其位置其实是固定的。</p>
+<p>另外 List 支持 <code>for</code> 循环，也就是通过下标来遍历，也可以用迭代器，但是 Set 只能用迭代，因为他无序，无法用下标来取得想要的值。</p>
+</blockquote>
+<p>Set 和 List 对比：</p>
+<ul>
+<li>Set：检索指定的元素效率高，删除和插入效率高，插入和删除<strong>可能会</strong>引起元素位置改变。</li>
+<li>List：和数组类似，List 可以动态增长，查找<strong>指定的</strong>元素效率低，插入删除指定的元素效率低，因为可能会引起其他元素位置改变。</li>
+</ul>
+<p>当然，如果是随机访问（指定下标），则 List 会快于 Set 。总之，什么场景下使用 Set ，什么场景下使用 List ，还是比较明确的。</p>
+<h2 id="List-和-Map-区别？"><a href="#List-和-Map-区别？" class="headerlink" title="List 和 Map 区别？"></a>List 和 Map 区别？</h2><ul>
+<li>List 是对象集合，允许对象重复。</li>
+<li>Map 是键值对的集合，不允许 key 重复。</li>
+</ul>
+<h2 id="Array-和-ArrayList-有何区别？什么时候更适合用-Array？"><a href="#Array-和-ArrayList-有何区别？什么时候更适合用-Array？" class="headerlink" title="Array 和 ArrayList 有何区别？什么时候更适合用 Array？"></a>Array 和 ArrayList 有何区别？什么时候更适合用 Array？</h2><ul>
+<li>Array 可以容纳基本类型和对象，而 ArrayList 只能容纳对象。</li>
+<li>Array 是指定大小的，而 ArrayList 大小是固定的，可自动扩容。</li>
+<li>Array 没有提供 ArrayList 那么多功能，比如 addAll、removeAll 和 iterator 等。</li>
+</ul>
+<p>尽管 ArrayList 明显是更好的选择，但也有些时候 Array 比较好用，比如下面的三种情况。</p>
+<ul>
+<li>1、如果列表的大小已经指定，大部分情况下是存储和遍历它们</li>
+<li>2、对于遍历基本数据类型，尽管 Collections 使用自动装箱来减轻编码任务，在指定大小的基本类型的列表上工作也会变得很慢。</li>
+<li>3、如果你要使用多维数组，使用 <code>[][]</code> 比 List 会方便。</li>
+</ul>
+<h2 id="ArrayList-与-LinkedList-区别？"><a href="#ArrayList-与-LinkedList-区别？" class="headerlink" title="ArrayList 与 LinkedList 区别？"></a>ArrayList 与 LinkedList 区别？</h2><h3 id="ArrayList"><a href="#ArrayList" class="headerlink" title="ArrayList"></a>ArrayList</h3><ul>
+<li>优点：ArrayList 是实现了基于动态数组的数据结构，因为地址连续，一旦数据存储好了，查询操作效率会比较高（在内存里是连着放的）。</li>
+<li>缺点：因为地址连续，ArrayList 要移动数据，所以插入和删除操作效率比较低。</li>
+</ul>
+<h3 id="LinkedList"><a href="#LinkedList" class="headerlink" title="LinkedList"></a>LinkedList</h3><ul>
+<li>优点：LinkedList 基于链表的数据结构，地址是任意的，所以在开辟内存空间的时候不需要等一个连续的地址。对于新增和删除操作 add 和 remove ，LinedList 比较占优势。LinkedList 适用于要头尾操作或插入指定位置的场景。</li>
+<li>缺点：因为 LinkedList 要移动指针，所以查询操作性能比较低。</li>
+</ul>
+<h3 id="适用场景分析"><a href="#适用场景分析" class="headerlink" title="适用场景分析"></a>适用场景分析</h3><ul>
+<li><p>当需要对数据进行对随机访问的情况下，选用 ArrayList 。</p>
+</li>
+<li><p>当需要对数据进行多次增加删除修改时，采用 LinkedList 。</p>
+<blockquote>
+<p>如果容量固定，并且只会添加到尾部，不会引起扩容，优先采用 ArrayList 。</p>
+</blockquote>
+</li>
+<li><p>当然，绝大数业务的场景下，使用 ArrayList 就够了。主要是，注意好避免 ArrayList 的扩容，以及非顺序的插入。</p>
+</li>
+</ul>
+<h3 id="ArrayList-是如何扩容的？"><a href="#ArrayList-是如何扩容的？" class="headerlink" title="ArrayList 是如何扩容的？"></a>ArrayList 是如何扩容的？</h3><p>直接看 <a target="_blank" rel="noopener" href="https://www.cnblogs.com/kuoAT/p/6771653.html">《ArrayList 动态扩容详解》</a> 文章，很详细。主要结论如下：</p>
+<ul>
+<li>如果通过无参构造的话，初始数组容量为 0 ，当真正对数组进行添加时，才真正分配容量。每次按照 <strong>1.5</strong> 倍（位运算）的比率通过 copeOf 的方式扩容。</li>
+<li>在 JKD6 中实现是，如果通过无参构造的话，初始数组容量为10，每次通过 copeOf 的方式扩容后容量为原来的 <strong>1.5</strong> 倍。</li>
+</ul>
+<blockquote>
+<p>重点是 1.5 倍扩容，这是和 HashMap 2 倍扩容不同的地方。</p>
+</blockquote>
+<h3 id="ArrayList-集合加入-1-万条数据，应该怎么提高效率？"><a href="#ArrayList-集合加入-1-万条数据，应该怎么提高效率？" class="headerlink" title="ArrayList 集合加入 1 万条数据，应该怎么提高效率？"></a>ArrayList 集合加入 1 万条数据，应该怎么提高效率？</h3><p>ArrayList 的默认初始容量为 10 ，要插入大量数据的时候需要不断扩容，而扩容是非常影响性能的。因此，现在明确了 10 万条数据了，我们可以直接在初始化的时候就设置 ArrayList 的容量！</p>
+<p>这样就可以提高效率了~</p>
+<h2 id="ArrayList-与-Vector-区别？"><a href="#ArrayList-与-Vector-区别？" class="headerlink" title="ArrayList 与 Vector 区别？"></a>ArrayList 与 Vector 区别？</h2><p>ArrayList 和 Vector 都是用数组实现的，主要有这么三个区别：</p>
+<ul>
+<li><p>1、Vector 是多线程安全的，线程安全就是说多线程访问同一代码，不会产生不确定的结果，而 ArrayList 不是。这个可以从源码中看出，Vector 类中的方法很多有 <code>synchronized</code> 进行修饰，这样就导致了 Vector 在效率上无法与 ArrayList 相比。</p>
+<blockquote>
+<p>Vector 是一种老的动态数组，是线程同步的，效率很低，一般不赞成使用。</p>
+</blockquote>
+</li>
+<li><p>2、两个都是采用的线性连续空间存储元素，但是当空间不足的时候，两个类的增加方式是不同。</p>
+</li>
+<li><p>3、Vector 可以设置增长因子，而 ArrayList 不可以。</p>
+</li>
+</ul>
+<p>适用场景分析：</p>
+<ul>
+<li><p>1、Vector 是线程同步的，所以它也是线程安全的，而 ArrayList 是线程无需同步的，是不安全的。如果不考虑到线程的安全因素，一般用 ArrayList 效率比较高。</p>
+<blockquote>
+<p>实际场景下，如果需要多线程访问安全的数组，使用 CopyOnWriteArrayList 。</p>
+</blockquote>
+</li>
+<li><p>2、如果集合中的元素的数目大于目前集合数组的长度时，在集合中使用数据量比较大的数据，用 Vector 有一定的优势。</p>
+<blockquote>
+<p>这种情况下，使用 LinkedList 更合适。</p>
+</blockquote>
+</li>
+</ul>
+<h2 id="HashMap-和-Hashtable-的区别？"><a href="#HashMap-和-Hashtable-的区别？" class="headerlink" title="HashMap 和 Hashtable 的区别？"></a>HashMap 和 Hashtable 的区别？</h2><blockquote>
+<p>Hashtable 是在 Java 1.0 的时候创建的，而集合的统一规范命名是在后来的 Java2.0 开始约定的，而当时其他一部分集合类的发布构成了新的集合框架。</p>
+</blockquote>
+<ul>
+<li>Hashtable 继承 Dictionary ，HashMap 继承的是 Java2 出现的 Map 接口。</li>
+<li>2、HashMap 去掉了 Hashtable 的 contains 方法，但是加上了 containsValue 和 containsKey 方法。</li>
+<li>3、HashMap 允许空键值，而 Hashtable 不允许。</li>
+<li>【重点】4、HashTable 是同步的，而 HashMap 是非同步的，效率上比 HashTable 要高。也因此，HashMap 更适合于单线程环境，而 HashTable 适合于多线程环境。</li>
+<li>5、HashMap 的迭代器（Iterator）是 fail-fast 迭代器，HashTable的 enumerator 迭代器不是 fail-fast 的。</li>
+<li>6、HashTable 中数组默认大小是 11 ，扩容方法是 <code>old * 2 + 1</code> ，HashMap 默认大小是 16 ，扩容每次为 2 的指数大小。</li>
+</ul>
+<p>一般现在不建议用 HashTable 。主要原因是两点：</p>
+<ul>
+<li>一是，HashTable 是遗留类，内部实现很多没优化和冗余。</li>
+<li>二是，即使在多线程环境下，现在也有同步的 ConcurrentHashMap 替代，没有必要因为是多线程而用 Hashtable 。</li>
+</ul>
+<p>Hashtable 的 <code>#size()</code> 方法中明明只有一条语句 <code>&quot;return count;&quot;</code> ，为什么还要做同步？</p>
+<p>同一时间只能有一条线程执行固定类的同步方法，但是对于类的非同步方法，可以多条线程同时访问。所以，这样就有问题了，可能线程 A 在执行 Hashtable 的 put 方法添加数据，线程 B 则可以正常调用 <code>#size()</code> 方法读取 Hashtable 中当前元素的个数，那读取到的值可能不是最新的，可能线程 A 添加了完了数据，但是没有对 <code>count++</code> ，线程 B 就已经读取 <code>count</code> 了，那么对于线程 B 来说读取到的 <code>count</code> 一定是不准确的。</p>
+<p><strong>而给 <code>#size()</code> 方法加了同步之后，意味着线程 B 调用 <code>#size()</code> 方法只有在线程 A 调用 put 方法完毕之后才可以调用，这样就保证了线程安全性</strong>。</p>
+<h2 id="HashSet-和-HashMap-的区别？"><a href="#HashSet-和-HashMap-的区别？" class="headerlink" title="HashSet 和 HashMap 的区别？"></a>HashSet 和 HashMap 的区别？</h2><ul>
+<li><p>Set 是线性结构，值不能重复。HashSet 是 Set 的 hash 实现，HashSet 中值不能重复是用 HashMap 的 key 来实现的。</p>
+</li>
+<li><p>Map 是键值对映射，可以空键空值。HashMap 是 Map 的 hash 实现，key 的唯一性是通过 key 值 hashcode 的唯一来确定，value 值是则是链表结构。</p>
+<blockquote>
+<p>因为不同的 key 值，可能有相同的 hashcode ，所以 value 值需要是链表结构。</p>
+</blockquote>
+</li>
+</ul>
+<p>他们的共同点都是 hash 算法实现的唯一性，他们都不能持有基本类型，只能持有对象。</p>
+<blockquote>
+<p>为了更好的性能，Netty 自己实现了 key 为基本类型的 HashMap ，例如 <a target="_blank" rel="noopener" href="https://netty.io/4.1/api/io/netty/util/collection/IntObjectHashMap.html">IntObjectHashMap</a> 。</p>
+</blockquote>
+<h2 id="HashSet-和-TreeSet-的区别？"><a href="#HashSet-和-TreeSet-的区别？" class="headerlink" title="HashSet 和 TreeSet 的区别？"></a>HashSet 和 TreeSet 的区别？</h2><ul>
+<li>HashSet 是用一个 hash 表来实现的，因此，它的元素是无序的。添加，删除和 HashSet 包括的方法的持续时间复杂度是 <code>O(1)</code> 。</li>
+<li>TreeSet 是用一个树形结构实现的，因此，它是有序的。添加，删除和 TreeSet 包含的方法的持续时间复杂度是 <code>O(logn)</code> 。</li>
+</ul>
+<h3 id="如何决定选用-HashMap-还是-TreeMap？"><a href="#如何决定选用-HashMap-还是-TreeMap？" class="headerlink" title="如何决定选用 HashMap 还是 TreeMap？"></a>如何决定选用 HashMap 还是 TreeMap？</h3><ul>
+<li>对于在 Map 中插入、删除和定位元素这类操作，HashMap 是最好的选择。</li>
+<li>然而，假如你需要对一个有序的 key 集合进行遍历， TreeMap 是更好的选择。</li>
+</ul>
+<p>基于你的 collection 的大小，也许向 HashMap 中添加元素会更快，再将 HashMap 换为 TreeMap 进行有序 key 的遍历。</p>
+<h2 id="HashMap-和-ConcurrentHashMap-的区别？"><a href="#HashMap-和-ConcurrentHashMap-的区别？" class="headerlink" title="HashMap 和 ConcurrentHashMap 的区别？"></a>HashMap 和 ConcurrentHashMap 的区别？</h2><p>ConcurrentHashMap 是线程安全的 HashMap 的实现。主要区别如下：</p>
+<ul>
+<li><p>1、ConcurrentHashMap 对整个桶数组进行了分割分段(Segment)，然后在每一个分段上都用 lock 锁进行保护，相对 于Hashtable 的 syn 关键字锁的粒度更精细了一些，并发性能更好。而 HashMap 没有锁机制，不是线程安全的。</p>
+<blockquote>
+<p>JDK8 之后，ConcurrentHashMap 启用了一种全新的方式实现,利用 CAS 算法。</p>
+</blockquote>
+</li>
+<li><p>2、HashMap 的键值对允许有 <code>null</code> ，但是 ConCurrentHashMap 都不允许。</p>
+</li>
+</ul>
+<h2 id="队列和栈是什么，列出它们的区别？"><a href="#队列和栈是什么，列出它们的区别？" class="headerlink" title="队列和栈是什么，列出它们的区别？"></a>队列和栈是什么，列出它们的区别？</h2><p>栈和队列两者都被用来预存储数据。</p>
+<ul>
+<li>java.util.Queue是一个接口，它的实现类在Java并发包中。<ul>
+<li>队列允许先进先出（FIFO）检索元素，但并非总是这样。</li>
+<li>Deque 接口允许从两端检索元素。</li>
+</ul>
+</li>
+<li>栈与队列很相似，但它允许对元素进行后进先出（LIFO）进行检索。<ul>
+<li>Stack 是一个扩展自 Vector 的类，而 Queue 是一个接口。</li>
+</ul>
+</li>
+</ul>
+<h2 id="HashMap-的工作原理是什么？"><a href="#HashMap-的工作原理是什么？" class="headerlink" title="HashMap 的工作原理是什么？"></a>HashMap 的工作原理是什么？</h2><p>我们知道在 Java 中最常用的两种结构是数组和模拟指针（引用），几乎所有的数据结构都可以利用这两种来组合实现，HashMap 也是如此。实际上 HashMap 是一个<strong>“链表散列”</strong>。</p>
+<p>HashMap 是基于 hashing 的原理。</p>
+<ul>
+<li>我们使用 <code>#put(key, value)</code> 方法来存储对象到 HashMap 中，使用 <code>get(key)</code> 方法从 HashMap 中获取对象。</li>
+<li>当我们给 <code>#put(key, value)</code> 方法传递键和值时，我们先对键调用 <code>#hashCode()</code> 方法，返回的 hashCode 用于找到 bucket 位置来储存 Entry 对象。</li>
+</ul>
+<h3 id="当两个对象的-hashCode-相同会发生什么？"><a href="#当两个对象的-hashCode-相同会发生什么？" class="headerlink" title="当两个对象的 hashCode 相同会发生什么？"></a>当两个对象的 hashCode 相同会发生什么？</h3><p>因为 hashcode 相同，所以它们的 bucket 位置相同，“碰撞”会发生。</p>
+<p>因为 HashMap 使用链表存储对象，这个 Entry（包含有键值对的 Map.Entry 对象）会存储在链表中。</p>
+<h3 id="hashCode-和-equals-方法有何重要性？"><a href="#hashCode-和-equals-方法有何重要性？" class="headerlink" title="hashCode 和 equals 方法有何重要性？"></a>hashCode 和 equals 方法有何重要性？</h3><p>HashMap 使用 key 对象的 <code>#hashCode()</code> 和 <code>#equals(Object obj)</code> 方法去决定 key-value 对的索引。当我们试着从 HashMap 中获取值的时候，这些方法也会被用到。</p>
+<ul>
+<li>如果这两个方法没有被正确地实现，在这种情况下，两个不同 Key 也许会产生相同的 <code>#hashCode()</code> 和 <code>#equals(Object obj)</code> 输出，HashMap 将会认为它们是相同的，然后覆盖它们，而非把它们存储到不同的地方。</li>
+</ul>
+<p>同样的，所有不允许存储重复数据的集合类都使用 <code>#hashCode()</code> 和 <code>#equals(Object obj)</code> 去查找重复，所以正确实现它们非常重要。<code>#hashCode()</code> 和 <code>#equals(Object obj)</code> 方法的实现，应该遵循以下规则：</p>
+<ul>
+<li>如果 <code>o1.equals(o2)</code> ，那么 <code>o1.hashCode() == o2.hashCode()</code> 总是为 <code>true</code> 的。</li>
+<li>如果 <code>o1.hashCode() == o2.hashCode()</code> ，并不意味 <code>o1.equals(o2)</code> 会为 <code>true</code> 。</li>
+</ul>
+<h3 id="HashMap-默认容量是多少？"><a href="#HashMap-默认容量是多少？" class="headerlink" title="HashMap 默认容量是多少？"></a>HashMap 默认容量是多少？</h3><p>默认容量都是 16 ，负载因子是 0.75 。就是当 HashMap 填充了 75% 的 busket 是就会扩容，最小的可能性是（<code>16 * 0.75 = 12</code>），一般为原内存的 2 倍。</p>
+<h3 id="有哪些顺序的-HashMap-实现类？"><a href="#有哪些顺序的-HashMap-实现类？" class="headerlink" title="有哪些顺序的 HashMap 实现类？"></a>有哪些顺序的 HashMap 实现类？</h3><ul>
+<li>LinkedHashMap ，是基于元素进入集合的顺序或者被访问的先后顺序排序。</li>
+<li>TreeMap ，是基于元素的固有顺序 (由 Comparator 或者 Comparable 确定)。</li>
+</ul>
+<h3 id="我们能否使用任何类作为-Map-的-key？"><a href="#我们能否使用任何类作为-Map-的-key？" class="headerlink" title="我们能否使用任何类作为 Map 的 key？"></a>我们能否使用任何类作为 Map 的 key？</h3><p>我们可以使用任何类作为 Map 的 key ，然而在使用它们之前，需要考虑以下几点：</p>
+<ul>
+<li><p>1、如果类重写了 equals 方法，它也应该重写 hashcode 方法。</p>
+</li>
+<li><p>2、类的所有实例需要遵循与 equals 和 hashcode 相关的规则。</p>
+</li>
+<li><p>3、如果一个类没有使用 equals ，你不应该在 hashcode 中使用它。</p>
+</li>
+<li><p>4、用户自定义 key 类的最佳实践是使之为不可变的，这样，hashcode 值可以被缓存起来，拥有更好的性能。不可变的类也可以确保hashcode 和 equals 在未来不会改变，这样就会解决与可变相关的问题了。</p>
+<blockquote>
+<p>比如，我有一个 类MyKey ，在 HashMap 中使用它。代码如下：</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;传递给MyKey的name参数被用于equals()和hashCode()中</span><br><span class="line">MyKey key &#x3D; new MyKey(&#39;Pankaj&#39;); &#x2F;&#x2F;assume hashCode&#x3D;1234</span><br><span class="line">myHashMap.put(key, &#39;Value&#39;);</span><br><span class="line">&#x2F;&#x2F; 以下的代码会改变key的hashCode()和equals()值</span><br><span class="line">key.setName(&#39;Amit&#39;); &#x2F;&#x2F;assume new hashCode&#x3D;7890</span><br><span class="line">&#x2F;&#x2F;下面会返回null，因为HashMap会尝试查找存储同样索引的key，而key已被改变了，匹配失败，返回null</span><br><span class="line">myHashMap.get(new MyKey(&#39;Pankaj&#39;));</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>那就是为何 String 和 Integer 被作为 HashMap 的 key 大量使用。</p>
+</li>
+</ul>
+<h3 id="HashMap-的长度为什么是-2-的幂次方？"><a href="#HashMap-的长度为什么是-2-的幂次方？" class="headerlink" title="HashMap 的长度为什么是 2 的幂次方？"></a>HashMap 的长度为什么是 2 的幂次方？</h3><p>为了能让 HashMap 存取高效，尽量较少碰撞，也就是要尽量把数据分配均匀，每个链表/红黑树长度大致相同。这个实现就是把数据存到哪个链表/红黑树中的算法。</p>
+<p>这个算法应该如何设计呢？我们首先可能会想到采用 <code>%</code> 取余的操作来实现。但是，重点来了：</p>
+<ul>
+<li>取余(<code>%</code>)操作中如果除数是 2 的幂次则等价于与其除数减一的与(<code>&amp;</code>)操作（也就是说 <code>hash % length == hash &amp; (length - 1)</code> 的前提是 length 是 2 的 n 次方；）。</li>
+<li>并且，采用二进制位操作 <code>&amp;</code>，相对于 <code>%</code> 能够提高运算效率，</li>
+</ul>
+<p>这就解释了 HashMap 的长度为什么是 2 的幂次方。</p>
+<h2 id="HashSet-的工作原理是什么？"><a href="#HashSet-的工作原理是什么？" class="headerlink" title="HashSet 的工作原理是什么？"></a>HashSet 的工作原理是什么？</h2><p>HashSet 是构建在 HashMap 之上的 Set hashing 实现类。让我们直接撸下源码，代码如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F; HashSet.java</span><br><span class="line"></span><br><span class="line">private transient HashMap&lt;E,Object&gt; map;</span><br><span class="line"></span><br><span class="line">private static final Object PRESENT &#x3D; new Object();</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><p><code>map</code> 属性，当我们创建一个 HashMap 对象时，其内部也会创建一个 <code>map</code> 对象。后续 HashSet 所有的操作，实际都是基于这个 <code>map</code> 之上的封装。</p>
+</li>
+<li><p><code>PRESENT</code> 静态属性，所有 <code>map</code> 中 KEY 对应的值，都是它，避免重复创建。</p>
+</li>
+<li><p>OK ，再来看一眼 add 方法，代码如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F; HashSet.java</span><br><span class="line"></span><br><span class="line">public boolean add(E e) &#123;</span><br><span class="line">    return map.put(e, PRESENT) &#x3D;&#x3D; null;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>是不是一目了然。</p>
+</li>
+</ul>
+<h3 id="HashSet-如何检查重复？"><a href="#HashSet-如何检查重复？" class="headerlink" title="HashSet 如何检查重复？"></a>HashSet 如何检查重复？</h3><blockquote>
+<p>艿艿：正如我们上面看到 HashSet 的实现原理，我们自然可以推导出，HashMap 也是如何检查重复滴。</p>
+</blockquote>
+<p>如下摘取自 《Head First Java》 第二版：</p>
+<p>当你把对象加入 HashSet 时，HashSet会先计算对象的hashcode值来判断对象加入的位置，同时也会与其他加入的对象的hashcode值作比较。</p>
+<ul>
+<li>如果没有相符的 hashcode ，HashSet会假设对象没有重复出现。</li>
+<li>但是如果发现有相同 hashcode 值的对象，这时会调用 equals 方法来检查 hashcode 相等的对象是否真的相同。<ul>
+<li>如果两者相同，HashSet 就不会让加入操作成功。</li>
+<li><strong>如果两者不同，HashSet 就会让加入操作成功</strong>。</li>
+</ul>
+</li>
+</ul>
+<h2 id="EnumSet-是什么？"><a href="#EnumSet-是什么？" class="headerlink" title="EnumSet 是什么？"></a>EnumSet 是什么？</h2><p><code>java.util.EnumSet</code> ，是使用枚举类型的集合实现。</p>
+<ul>
+<li>当集合创建时，枚举集合中的所有元素必须来自单个指定的枚举类型，可以是显示的或隐示的。EnumSet 是不同步的，不允许值为 <code>null</code> 的元素。</li>
+<li>它也提供了一些有用的方法，比如 <code>#copyOf(Collection c)</code>、<code>#of(E first, E... rest)</code> 和 <code>#complementOf(EnumSet s)</code> 方法。</li>
+</ul>
+<p>关于 EnumSet 的源码解析，见 <a target="_blank" rel="noopener" href="https://blog.csdn.net/u010887744/article/details/50834738">《EnumSet 源码分析》</a> 文章。</p>
+<h2 id="TreeMap-原理"><a href="#TreeMap-原理" class="headerlink" title="TreeMap 原理"></a>TreeMap 原理</h2><p>Java 中的 TreeMap 是使用红黑树实现的。</p>
+<p>TODO TreeMap和TreeSet在排序时如何比较元素？Collections工具类中的sort()方法如何比较元素？</p>
+<p>等到源码解析后，在进行补充。</p>
+<h2 id="Java-Priority-Queue-是什么"><a href="#Java-Priority-Queue-是什么" class="headerlink" title="Java Priority Queue 是什么?"></a>Java Priority Queue 是什么?</h2><p>PriorityQueue 是一个基于优先级堆的无界队列，它的元素都以他们的自然顺序有序排列。</p>
+<ul>
+<li>在它创建的时候，我们可以可以提供一个比较器 Comparator 来负责PriorityQueue 中元素的排序。</li>
+<li>PriorityQueue 不允许 `` null元素，不允许不提供自然排序的对象，也不允许没有任何关联 Comparator 的对象。</li>
+<li>最后，PriorityQueue 不是线程安全的，在执行入队和出队操作它需要 <code>O(log(n))</code> 的时间复杂度。</li>
+</ul>
+<h3 id="poll-方法和-remove-方法的区别？"><a href="#poll-方法和-remove-方法的区别？" class="headerlink" title="poll 方法和 remove 方法的区别？"></a>poll 方法和 remove 方法的区别？</h3><p>poll 和 remove 方法，都是从队列中取出一个元素，差别在于：</p>
+<ul>
+<li>poll 方法，在获取元素失败的时候会返回空</li>
+<li>remove() 方法，失败的时候会抛出异常。</li>
+</ul>
+<h3 id="LinkedHashMap-和-PriorityQueue-的区别是什么？"><a href="#LinkedHashMap-和-PriorityQueue-的区别是什么？" class="headerlink" title="LinkedHashMap 和 PriorityQueue 的区别是什么？"></a>LinkedHashMap 和 PriorityQueue 的区别是什么？</h3><ul>
+<li>PriorityQueue 保证最高或者最低优先级的的元素总是在队列头部，LinkedHashMap 维持的顺序是元素插入的顺序。</li>
+<li>当遍历一个 PriorityQueue 时，没有任何顺序保证，但是 LinkedHashMap 课保证遍历顺序是元素插入的顺序。</li>
+</ul>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
     <link itemprop="mainEntityOfPage" href="http://fatefrank.github.io/2020/07/25/Java%E3%80%90%E5%9F%BA%E7%A1%80%E3%80%91%E9%9D%A2%E8%AF%95%E9%A2%98/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -976,241 +1385,6 @@
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="http://fatefrank.github.io/2020/07/15/03-gc-algorithms/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Seif Zheng">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Seif Zheng's blog">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2020/07/15/03-gc-algorithms/" class="post-title-link" itemprop="url">JVM 系列(三) - 垃圾收集策略与算法</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-07-15 00:00:00" itemprop="dateCreated datePublished" datetime="2020-07-15T00:00:00+08:00">2020-07-15</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-08-04 15:55:31" itemprop="dateModified" datetime="2020-08-04T15:55:31+08:00">2020-08-04</time>
-              </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="垃圾收集策略与算法"><a href="#垃圾收集策略与算法" class="headerlink" title="垃圾收集策略与算法"></a>垃圾收集策略与算法</h1><p>程序计数器、虚拟机栈、本地方法栈随线程而生，也随线程而灭；栈帧随着方法的开始而入栈，随着方法的结束而出栈。这几个区域的内存分配和回收都具有确定性，在这几个区域内不需要过多考虑回收的问题，因为方法结束或者线程结束时，内存自然就跟随着回收了。</p>
-<p>而对于 Java 堆和方法区，我们只有在程序运行期间才能知道会创建哪些对象，这部分内存的分配和回收都是动态的，垃圾收集器所关注的正是这部分内存。</p>
-<h2 id="判定对象是否存活"><a href="#判定对象是否存活" class="headerlink" title="判定对象是否存活"></a>判定对象是否存活</h2><p>若一个对象不被任何对象或变量引用，那么它就是无效对象，需要被回收。</p>
-<h3 id="引用计数法"><a href="#引用计数法" class="headerlink" title="引用计数法"></a>引用计数法</h3><p>在对象头维护着一个 counter 计数器，对象被引用一次则计数器 +1；若引用失效则计数器 -1。当计数器为 0 时，就认为该对象无效了。</p>
-<p>引用计数算法的实现简单，判定效率也很高，在大部分情况下它都是一个不错的算法。但是主流的 Java 虚拟机里没有选用引用计数算法来管理内存，主要是因为它很难解决对象之间循环引用的问题。</p>
-<blockquote>
-<p>举个栗子👉对象 objA 和 objB 都有字段 instance，令 objA.instance = objB 并且 objB.instance = objA，由于它们互相引用着对方，导致它们的引用计数都不为 0，于是引用计数算法无法通知 GC 收集器回收它们。</p>
-</blockquote>
-<h3 id="可达性分析法"><a href="#可达性分析法" class="headerlink" title="可达性分析法"></a>可达性分析法</h3><p>所有和 GC Roots 直接或间接关联的对象都是有效对象，和 GC Roots 没有关联的对象就是无效对象。</p>
-<p>GC Roots 是指：</p>
-<ul>
-<li>Java 虚拟机栈（栈帧中的本地变量表）中引用的对象，譬如各个线程被调用的方法堆栈中使用到的<br>参数、局部变量、临时变量等。</li>
-<li>本地方法栈中JNI（即通常所说的Native方法）引用的对象</li>
-<li>方法区中常量引用的对象，譬如字符串常量池（String Table）里的引用。</li>
-<li>方法区中类静态属性引用的对象，譬如Java类的引用类型静态变量。</li>
-<li>Java虚拟机内部的引用，如基本数据类型对应的Class对象，一些常驻的异常对象（比如<br>NullPointExcepiton、OutOfMemoryError）等，还有系统类加载器。</li>
-<li>所有被同步锁（synchronized关键字）持有的对象。</li>
-<li>反映Java虚拟机内部情况的JMXBean、JVMTI中注册的回调、本地代码缓存等。</li>
-</ul>
-<p>GC Roots 并不包括堆中对象所引用的对象，这样就不会有循环引用的问题。</p>
-<p>除了这些固定的GC Roots集合以外，根据用户所选用的垃圾收集器以及当前回收的内存区域不同，还可以有其他对象“临时性”地加入，共同构成完整GC Roots集合。</p>
-<h2 id="引用的种类"><a href="#引用的种类" class="headerlink" title="引用的种类"></a>引用的种类</h2><p>判定对象是否存活与“引用”有关。在 JDK 1.2 以前，Java 中的引用定义很传统，一个对象只有被引用或者没有被引用两种状态，我们希望能描述这一类对象：当内存空间还足够时，则保留在内存中；如果内存空间在进行垃圾手收集后还是非常紧张，则可以抛弃这些对象。很多系统的缓存功能都符合这样的应用场景。</p>
-<p>在 JDK 1.2 之后，Java 对引用的概念进行了扩充，将引用分为了以下四种。不同的引用类型，主要体现的是对象不同的可达性状态<code>reachable</code>和垃圾收集的影响。</p>
-<h3 id="强引用（Strong-Reference）"><a href="#强引用（Strong-Reference）" class="headerlink" title="强引用（Strong Reference）"></a>强引用（Strong Reference）</h3><p>类似 “Object obj = new Object()” 这类的引用，就是强引用，只要强引用存在，垃圾收集器永远不会回收被引用的对象。但是，如果我们<strong>错误地保持了强引用</strong>，比如：赋值给了 static 变量，那么对象在很长一段时间内不会被回收，会产生内存泄漏。</p>
-<h3 id="软引用（Soft-Reference）"><a href="#软引用（Soft-Reference）" class="headerlink" title="软引用（Soft Reference）"></a>软引用（Soft Reference）</h3><p>软引用是一种相对强引用弱化一些的引用，可以让对象豁免一些垃圾收集，只有当 JVM 认为内存不足时，才会去试图回收软引用指向的对象。JVM 会确保在抛出 OutOfMemoryError 之前，清理软引用指向的对象。软引用通常用来<strong>实现内存敏感的缓存</strong>，如果还有空闲内存，就可以暂时保留缓存，当内存不足时清理掉，这样就保证了使用缓存的同时，不会耗尽内存。在JDK 1.2版之后提供了SoftReference类来实现软引用。</p>
-<h3 id="弱引用（Weak-Reference）"><a href="#弱引用（Weak-Reference）" class="headerlink" title="弱引用（Weak Reference）"></a>弱引用（Weak Reference）</h3><p>弱引用的<strong>强度比软引用更弱</strong>一些。当 JVM 进行垃圾回收时，<strong>无论内存是否充足，都会回收</strong>只被弱引用关联的对象。在JDK 1.2版之后提供了WeakReference类来实现弱引用。</p>
-<h3 id="虚引用（Phantom-Reference）"><a href="#虚引用（Phantom-Reference）" class="headerlink" title="虚引用（Phantom Reference）"></a>虚引用（Phantom Reference）</h3><p>虚引用也称幽灵引用或者幻影引用，它是<strong>最弱</strong>的一种引用关系。一个对象是否有虚引用的存在，完全不会对其生存时间构成影响。它仅仅是提供了一种确保对象被 finalize 以后，做某些事情的机制，比如，通常用来做所谓的 Post-Mortem 清理机制。在JDK 1.2版之后提供了PhantomReference类来实现虚引用。</p>
-<h2 id="回收堆中无效对象"><a href="#回收堆中无效对象" class="headerlink" title="回收堆中无效对象"></a>回收堆中无效对象</h2><p>对于可达性分析中不可达的对象，也并不是没有存活的可能。</p>
-<h3 id="判定-finalize-是否有必要执行"><a href="#判定-finalize-是否有必要执行" class="headerlink" title="判定 finalize() 是否有必要执行"></a>判定 finalize() 是否有必要执行</h3><p>JVM 会判断此对象是否有必要执行 finalize() 方法，如果对象没有覆盖 finalize() 方法，或者 finalize() 方法已经被虚拟机调用过，那么视为“没有必要执行”。那么对象基本上就真的被回收了。</p>
-<p>如果对象被判定为有必要执行 finalize() 方法，那么对象会被放入一个 F-Queue 队列中，虚拟机会以较低的优先级执行这些 finalize()方法，但不会确保所有的 finalize() 方法都会执行结束。如果 finalize() 方法出现耗时操作，虚拟机就直接停止执行该方法，将对象清除。</p>
-<h3 id="对象重生或死亡"><a href="#对象重生或死亡" class="headerlink" title="对象重生或死亡"></a>对象重生或死亡</h3><p>如果在执行 finalize() 方法时，将 this 赋给了某一个引用，那么该对象就重生了。如果没有，那么就会被垃圾收集器清除。</p>
-<blockquote>
-<p>任何一个对象的 finalize() 方法只会被系统自动调用一次，如果对象面临下一次回收，它的 finalize() 方法不会被再次执行，想继续在 finalize() 中自救就失效了。</p>
-<p>不推荐使用 finalize() 方法！！！</p>
-</blockquote>
-<h2 id="回收方法区内存"><a href="#回收方法区内存" class="headerlink" title="回收方法区内存"></a>回收方法区内存</h2><p>方法区中存放生命周期较长的类信息、常量、静态变量，每次垃圾收集只有少量的垃圾被清除。方法区中主要清除两种垃圾：</p>
-<ul>
-<li>废弃常量</li>
-<li>无用的类</li>
-</ul>
-<h3 id="判定废弃常量"><a href="#判定废弃常量" class="headerlink" title="判定废弃常量"></a>判定废弃常量</h3><p>只要常量池中的常量不被任何变量或对象引用，那么这些常量就会被清除掉。比如，一个字符串 “bingo” 进入了常量池，但是当前系统没有任何一个 String 对象引用常量池中的 “bingo” 常量，也没有其它地方引用这个字面量，必要的话，”bingo”常量会被清理出常量池。</p>
-<h3 id="判定无用的类"><a href="#判定无用的类" class="headerlink" title="判定无用的类"></a>判定无用的类</h3><p>判定一个类是否是“无用的类”，条件较为苛刻。</p>
-<ul>
-<li>该类的所有对象都已经被清除</li>
-<li>加载该类的 ClassLoader 已经被回收</li>
-<li>该类的 java.lang.Class 对象没有在任何地方被引用，无法在任何地方通过反射访问该类的方法。</li>
-</ul>
-<blockquote>
-<p>一个类被虚拟机加载进方法区，那么在堆中就会有一个代表该类的对象：java.lang.Class。这个对象在类被加载进方法区时创建，在方法区该类被删除时清除。</p>
-</blockquote>
-<p>Java虚拟机被允许对满足上述三个条件的无用类进行回收，这里说的仅仅是“被允许”，而并不是和对象一样，没有引用了就必然会回收。</p>
-<p>关于是否要对类型进行回收，HotSpot虚拟机提供了-Xnoclassgc参数进行控制，还可以使用-verbose：class以及-XX：+TraceClass-Loading、-XX：+TraceClassUnLoading查看类加载和卸载信息，其中-verbose：class和-XX：+TraceClassLoading可以在Product版的虚拟机中使用，-XX：+TraceClassUnLoading参数需要FastDebug版的虚拟机支持。</p>
-<p>在大量使用反射、动态代理、CGLib等字节码框架，动态生成JSP以及OSGi这类频繁自定义类加载器的场景中，通常都需要Java虚拟机具备类型卸载的能力，以保证不会对方法区造成过大的内存压力。</p>
-<h2 id="垃圾收集算法"><a href="#垃圾收集算法" class="headerlink" title="垃圾收集算法"></a>垃圾收集算法</h2><h3 id="分代收集理论"><a href="#分代收集理论" class="headerlink" title="分代收集理论"></a>分代收集理论</h3><p><strong>分代假说</strong>：</p>
-<p>1）弱分代假说（Weak Generational Hypothesis）：绝大多数对象都是朝生夕灭的。</p>
-<p>2）强分代假说（Strong Generational Hypothesis）：熬过越多次垃圾收集过程的对象就越难以消亡。</p>
-<p>3）跨代引用假说（Intergenerational Reference Hypothesis）：跨代引用相对于同代引用来说仅占极少数。</p>
-<blockquote>
-<p>即 存在互相引用关系的两个对象，是应该倾向于同时生存或者同时消亡的。</p>
-</blockquote>
-<p><strong>假说1和2奠定的垃圾收集器的设计原则</strong>：</p>
-<p>收集器应该将Java堆划分出不同的区域，然后将回收对象依据其年龄（年龄即对象熬过垃圾收集过程的次数）分配到不同的区域之中存储。</p>
-<blockquote>
-<p>如果一个区域中大多数对象大多朝生夕灭，回收时关注保留少量存活；如果剩下的都是难以消亡的对象，那把它们集中放在一块，虚拟机便可以使用较低的频率来回收这个区域。</p>
-</blockquote>
-<p><strong>商业虚拟机实现</strong>：</p>
-<p>把分代收集理论具体放到现在的商用Java虚拟机里，设计者一般至少会把Java堆划分为新生代和老年代两个区域。顾名思义，在新生代中，每次垃圾收集时都发现有大批对象死去，而每次回收后存活的少量对象，将会逐步晋升到老年代中存放。</p>
-<p><strong>跨代收集的痛点</strong>：</p>
-<p>假如要现在进行一次只局限于新生代区域内的收集（Minor GC），但新生代中的对象是完全有可能被老年代所引用的，为了找出该区域中的存活对象，不得不在固定的GC Roots之外，再额外遍历整个老年代中所有对象来确保可达性分析结果的正确性，反过来也是一样。这会为内存回收带来很大的性能负担。</p>
-<p><strong>基于假说3的跨代收集解决方案</strong>：</p>
-<p>依据这条假说，我们就不应再为了少量的跨代引用去扫描整个老年代，也不必浪费空间专门记录每一个对象是否存在及存在哪些跨代引用，只需在新生代上建立一个全局的数据结构（该结构被称为“记忆集”，Remembered Set），这个结构把老年代划分成若干小块，标识出老年代的哪一块内存会存在跨代引用。此后当发生Minor GC时，只有包含了跨代引用的小块内存里的对象才会被加入到GC Roots进行扫描。虽然这种方法需要在对象改变引用关系（如将自己或者某个属性赋值）时维护记录数据的正确性，会增加一些运行时的开销，但比起收集时扫描整个老年代来说仍然是划算的。</p>
-<blockquote>
-<p>一些术语：</p>
-<p>部分收集（Partial GC）：指目标不是完整收集整个Java堆的垃圾收集，其中又分为：</p>
-<ul>
-<li><p>新生代收集（Minor GC/Young GC）：指目标只是新生代的垃圾收集。</p>
-</li>
-<li><p>老年代收集（Major GC/Old GC）：指目标只是老年代的垃圾收集。目前只有CMS收集器会有单<br>独收集老年代的行为。另外请注意“Major GC”这个说法现在有点混淆，在不同资料上常有不同所指，<br>读者需按上下文区分到底是指老年代的收集还是整堆收集。</p>
-</li>
-<li><p>混合收集（Mixed GC）：指目标是收集整个新生代以及部分老年代的垃圾收集。目前只有G1收<br>集器会有这种行为。</p>
-</li>
-</ul>
-<p>整堆收集（Full GC）：收集整个Java堆和方法区的垃圾收集。</p>
-</blockquote>
-<h3 id="标记-清除算法"><a href="#标记-清除算法" class="headerlink" title="标记-清除算法"></a>标记-清除算法</h3><p><strong>标记</strong>的过程是：遍历所有的 <code>GC Roots</code>，然后将所有 <code>GC Roots</code> 可达的对象<strong>标记为存活的对象</strong>。</p>
-<p><strong>清除</strong>的过程将遍历堆中所有的对象，将没有标记的对象全部清除掉。与此同时，清除那些被标记过的对象的标记，以便下次的垃圾回收。 </p>
-<blockquote>
-<p>标记-清除算法需要停顿用户线程来标记、清理可回收对象的，但是停顿时间相对标记-整理要短。</p>
-</blockquote>
-<p>这种方法有两个<strong>不足</strong>：</p>
-<ul>
-<li>效率问题：标记和清除两个过程的效率都不高。</li>
-<li>空间问题：标记清除之后会产生大量不连续的内存碎片，碎片太多可能导致以后需要分配较大对象时，无法找到足够的连续内存而不得不提前触发另一次垃圾收集动作。</li>
-</ul>
-<h3 id="复制算法（新生代）"><a href="#复制算法（新生代）" class="headerlink" title="复制算法（新生代）"></a>复制算法（新生代）</h3><p>为了解决效率问题，“复制”收集算法出现了。它将可用内存按容量划分为大小相等的两块，每次只使用其中的一块。当这一块内存用完，需要进行垃圾收集时，就将存活者的对象复制到另一块上面，然后将第一块内存全部清除。这种算法有优有劣：</p>
-<ul>
-<li>优点：不会有内存碎片的问题。</li>
-<li>缺点：内存缩小为原来的一半，浪费空间。</li>
-</ul>
-<p>为了解决空间利用率问题，可以将内存分为三块： Eden、From Survivor、To Survivor，比例是 8:1:1，每次使用 Eden 和其中一块 Survivor。回收时，将 Eden 和 Survivor 中还存活的对象一次性复制到另外一块 Survivor 空间上，最后清理掉 Eden 和刚才使用的 Survivor 空间。这样只有 10% 的内存被浪费。</p>
-<p>但是我们无法保证每次回收都只有不多于 10% 的对象存活，当 Survivor 空间不够，需要依赖其他内存（指老年代）进行分配担保。</p>
-<h4 id="分配担保"><a href="#分配担保" class="headerlink" title="分配担保"></a>分配担保</h4><p>如果另外一块Survivor空间没有足够空间存放上一次新生代收集下来的存活对象，这些对象便将通过分配担保机制直接进入老年代，这对虚拟机来说就是安全的。</p>
-<h3 id="标记-整理算法（老年代）"><a href="#标记-整理算法（老年代）" class="headerlink" title="标记-整理算法（老年代）"></a>标记-整理算法（老年代）</h3><p><strong>标记</strong>：它的第一个阶段与<strong>标记/清除算法</strong>是一模一样的，均是遍历 <code>GC Roots</code>，然后将存活的对象标记。</p>
-<p><strong>整理</strong>：移动所有<strong>存活的对象</strong>，且按照内存地址次序依次排列，然后将末端内存地址以后的内存全部回收。因此，第二阶段才称为整理阶段。</p>
-<p>这是一种老年代的垃圾收集算法。老年代的对象一般寿命比较长，因此每次垃圾回收会有大量对象存活，如果采用复制算法，每次需要复制大量存活的对象，效率很低。</p>
-<blockquote>
-<p>如果移动存活对象，尤其是在老年代这种每次回收都有大量对象存活区域，移动存活对象并更新所有引用这些对象的地方将会是一种极为负重的操作，而且这种对象移动操作必须全程暂停用户应用程序才能进行，这就更加让使用者不得不小心翼翼地权衡其弊端了，像这样的停顿被最初的虚拟机设计者形象地描述为“Stop The World”。</p>
-<p>但如果跟标记-清除算法那样完全不考虑移动和整理存活对象的话，弥散于堆中的存活对象导致的空间碎片化问题就只能依赖更为复杂的内存分配器和内存访问器来解决。内存的访问是用户程序最频繁的操作，甚至都没有之一，假如在这个环节上增加了额外的负担，势必会直接影响应用程序的吞吐量。</p>
-<p>基于以上两点，是否移动对象都存在弊端，移动则内存回收时会更复杂，不移动则内存分配时会更复杂。</p>
-<p>从垃圾收集的停顿时间来看，不移动对象停顿时间会更短，甚至可以不需要停顿，但是从整个程序的吞吐量来看，移动对象会更划算。此语境中，吞吐量的实质是赋值器（Mutator，可以理解为使用垃圾收集的用户程序，本书为便于理解，多数地方用“用户程序”或“用户线程”代替）与收集器的效率总和。即使不移动对象会使得收集器的效率提升一些，但因内存分配和访问相比垃圾收集频率要高得多，这部分的耗时增加，总吞吐量仍然是下降的。</p>
-<p>另外，还有一种“和稀泥式”解决方案可以不在内存分配和访问上增加太大额外负担，做法是让虚拟机平时多数时间都采用标记-清除算法，暂时容忍内存碎片的存在，直到内存空间的碎片化程度已经大到影响对象分配时，再采用标记-整理算法收集一次，以获得规整的内存空间。</p>
-</blockquote>
-<h3 id="分代收集算法"><a href="#分代收集算法" class="headerlink" title="分代收集算法"></a>分代收集算法</h3><p>根据对象存活周期的不同，将内存划分为几块。一般是把 Java 堆分为新生代和老年代，针对各个年代的特点采用最适当的收集算法。  </p>
-<ul>
-<li>新生代：复制算法</li>
-<li>老年代：标记-清除算法、标记-整理算法</li>
-</ul>
-<h2 id="HotSpot的算法实现细节"><a href="#HotSpot的算法实现细节" class="headerlink" title="HotSpot的算法实现细节"></a>HotSpot的算法实现细节</h2><h3 id="根节点枚举"><a href="#根节点枚举" class="headerlink" title="根节点枚举"></a>根节点枚举</h3><p>收集器在根节点枚举时都是必须暂停用户线程的，是为了保证根节点枚举必须在一个能保障一致性的快照中进行。</p>
-<p>HotSpot会使用一组称为OopMap的数据结构来直接得知哪些地方存放着对象引用。类加载完成时，HotSpot就会把对象内什么偏移量上是什么类型的数据计算出来，在即时编译过程中，也会在”特定位置”记录下栈里和寄存器里哪些位置是引用。</p>
-<h3 id="安全点"><a href="#安全点" class="headerlink" title="安全点"></a>安全点</h3><p>HotSpot没有为每条指令都生成OopMap，只是在“特定的位置”记录这些信息，这些位置被称为安全点。</p>
-<p>安全点位置的选取标准：是否具有让程序长时间执行的特征，长时间执行的最明显特征就是指令序列的复用，例如方法调用、循环跳转、异常跳转等，只有具有这些功能的指令才会产生安全点。</p>
-<p>如何在垃圾收集发生时让所有线程都跑到最近的安全点，然后停顿下来？</p>
-<p>抢先式中断：垃圾收集发生时，系统首先把所有用户线程全部中断，如果发现有用户线程中断的地方不在安全点上，就恢复这条线程执行，让它一会再重新中断，直到跑到安全点上。现在几乎没有虚拟机采用。</p>
-<p>主动式中断：垃圾收集发生时，设置一个标志位，各个线程执行过程时会不停地主动去轮询这个标志，一旦发现中断标志为真时就自己在最近的安全点上主动中断挂起。</p>
-<blockquote>
-<p>轮询标志的地方和安全点是重合的，另外还要加上所有创建对象和其他需要在Java堆上分配内存的地方，这是为了检查是否即将要发生垃圾收集，避免没有足够内存分配新对象。</p>
-<p>由于轮询操作在代码中会频繁出现，这要求它必须足够高效。HotSpot使用内存保护陷阱的方式，把轮询操作精简至只有一条汇编指令的程度。</p>
-</blockquote>
-<h3 id="安全区域"><a href="#安全区域" class="headerlink" title="安全区域"></a>安全区域</h3><p>概念：确保引用关系不会发生变化的某一代码片段，叫作”安全区域”。</p>
-<p>作用：主要解决用户线程处于 Sleep 或 Blocked 状态时无法响应虚拟机的中断请求。</p>
-<p>作用过程：当用户线程执行到安全区域里面的代码时，会标识自己已经进入了安全区域，在这段时间里虚拟机要发起垃圾收集时就不会管这些已声明自己在安全区域内的线程了。当线程要离开安全区域时，它要检查虚拟机是否已经完成了根节点枚举（或者垃圾收集过程中其他需要暂停用户线程的阶段），如果完成了，那线程继续执行；否则它就必须一直等待，直到收到可以离开安全区域的信号为止。</p>
-<blockquote>
-<p>我们可以把安全区域看作被扩展拉伸了的安全点。</p>
-</blockquote>
-<h3 id="记忆集与卡表"><a href="#记忆集与卡表" class="headerlink" title="记忆集与卡表"></a>记忆集与卡表</h3><p>为解决对象跨代引用所带来的问题，垃圾收集器在新生代中建立了名为记忆集的数据结构，用以避免把整个老年代加进GC Roots扫描范围。</p>
-<p>记忆集是一种用于记录从非收集区域指向收集区域的指针集合的抽象数据结构。</p>
-<p>记忆集的记录精度：</p>
-<p>字长精度：每个记录精确到一个机器字长（就是处理器的寻址位数，如常见的32位或64位，这个精度决定了机器访问物理内存地址的指针长度），该字包含跨代指针。<br>对象精度：每个记录精确到一个对象，该对象里有字段含有跨代指针。<br>卡精度：每个记录精确到一块内存区域，该区域内有对象含有跨代指针。</p>
-<p>卡表是记忆集基于”卡精度”的具体实现。</p>
-<p>卡表最简单的形式可以只是一个字节数组，而HotSpot虚拟机确实也是这样做的。</p>
-<p>字节数组CARD_TABLE的每一个元素都对应着其标识的内存区域中一块特定大小的内存块，这个内存块被称作“卡页”（Card Page）。一般来说，卡页大小都是以2的N次幂，HotSpot中使用的卡页是2的9次幂，即512字节。</p>
-<p>一个卡页的内存中通常包含不止一个对象，只要卡页内有一个（或更多）对象的字段存在着跨代指针，那就将对应卡表的数组元素的值标识为1，称为这个元素变脏（Dirty），没有则标识为0。在垃圾收集发生时，只要筛选出卡表中变脏的元素，就能轻易得出哪些卡页内存块中包含跨代指针，把它们加入GC Roots中一并扫描。</p>
-<h3 id="写屏障-卡表的维护技术"><a href="#写屏障-卡表的维护技术" class="headerlink" title="写屏障(卡表的维护技术)"></a>写屏障(卡表的维护技术)</h3><p>卡表元素如何维护？例如它们何时变脏、谁来把它们变脏等。</p>
-<p>HotSpot虚拟机里是通过写屏障（Write Barrier）技术维护卡表状态的。</p>
-<p>写屏障可以看作在虚拟机层面对“引用类型字段赋值”这个动作的AOP切面，在引用对象赋值时会产生一个环形通知，供程序执行额外的动作，也就是说赋值的前后都在写屏障的覆盖范畴内。在赋值前的部分的写屏障叫作写前屏障，在赋值后的则叫作写后屏障。</p>
-<p>应用写屏障后，虚拟机就会为所有赋值操作生成相应的指令，一旦收集器在写屏障中增加了更新卡表操作，无论更新的是不是老年代对新生代对象的引用，每次只要对引用进行更新，就会产生额外的开销，不过这个开销与Minor GC时扫描整个老年代的代价相比还是低得多的。</p>
-<p>卡表在高并发场景下还面临着“伪共享”（False Sharing）问题。伪共享是处理并发底层细节时一种经常需要考虑的问题，现代中央处理器的缓存系统中是以缓存行为单位存储的，当多线程修改互相独立的变量时，如果这些变量恰好共享同一个缓存行，就会彼此影响（写回、无效化或者同步）而导致性能降低，这就是伪共享问题。</p>
-<p>为了避免伪共享问题，一种简单的解决方案是不采用无条件的写屏障，而是先检查卡表标记，只有当该卡表元素未被标记过时才将其标记为变脏。</p>
-<p>在JDK 7之后，HotSpot虚拟机增加了一个新的参数-XX：+UseCondCardMark，用来决定是否开启卡表更新的条件判断。开启会增加一次额外判断的开销，但能够避免伪共享问题，两者各有性能损耗，是否打开要根据应用实际运行情况来进行测试权衡。</p>
-<h3 id="并发的可达性分析"><a href="#并发的可达性分析" class="headerlink" title="并发的可达性分析"></a>并发的可达性分析</h3><p>三色标记：</p>
-<p>白色：表示对象尚未被垃圾收集器访问过。</p>
-<p>灰色：表示对象已经被垃圾收集器访问过，切这个对象上至少有一个引用还没有被扫描过。</p>
-<p>黑色：表示对象已经被垃圾收集器访问过，且这个对象的所有引用都已经扫描过。</p>
-<p>过程：</p>
-<p>收集器在对象图上标记颜色，同时用户线程在修改引用关系(即修改对象图结构)，如果把原本存活的对象错误标记为已消亡，就会发生对象消失，导致程序出错。最后清理标记为白色的对象。</p>
-<blockquote>
-<p>把原本消亡的对象错误标记为存活，这不是好事，但其实是可以容忍的，只不过产生了一点逃过本次收集的浮动垃圾而已，下次收集清理掉就好。</p>
-</blockquote>
-<p>对象消失：</p>
-<p>Wilson于1994年在理论上证明了，当且仅当以下两个条件同时满足时，会产生“对象消失”的问题，即原本应该是黑色的对象被误标为白色：</p>
-<ul>
-<li><p>赋值器插入了一条或多条从黑色对象到白色对象的新引用</p>
-</li>
-<li><p>赋值器删除了全部从灰色对象到该白色对象的直接或间接引用</p>
-</li>
-</ul>
-<p>解决方案：</p>
-<ul>
-<li>增量更新 (Incremental Update)：当黑色对象插入新的指向白色对象的引用关系时，就将这个新插入的引用记录下来，等并发扫描结束之后，再将这些记录过的引用关系中的黑色对象为根，重新扫描一次。应用：CMS。</li>
-<li>原始快照 (Snap At The beginning, SATB)：当灰色对象要删除指向白色对象的引用关系时，就将这个要删除的引用记录下来，在并发扫描结束之后，再将这些记录过的引用关系中的灰色对象为根，重新扫描一次。应用：G1、Shenandoah</li>
-</ul>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
 
   
   <nav class="pagination">
@@ -1282,7 +1456,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">9</span>
+          <span class="site-state-item-count">10</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
