@@ -159,6 +159,105 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://fatefrank.github.io/2020/07/21/05-memory-allocation-gc/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Seif Zheng">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Seif Zheng's blog">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2020/07/21/05-memory-allocation-gc/" class="post-title-link" itemprop="url">JVM 系列(五) - 内存分配与回收策略</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-07-21 00:00:00" itemprop="dateCreated datePublished" datetime="2020-07-21T00:00:00+08:00">2020-07-21</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-08-04 15:56:20" itemprop="dateModified" datetime="2020-08-04T15:56:20+08:00">2020-08-04</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id=""><a href="#" class="headerlink" title=""></a></h1><p>对象的内存分配，就是在堆上分配（也可能经过 JIT 编译后被拆散为标量类型并间接在栈上分配），对象主要分配在新生代的 Eden 区上，少数情况下可能直接分配在老年代，<strong>分配规则不固定</strong>，取决于当前使用的垃圾收集器组合以及相关的参数配置。</p>
+<p>以下列举几条最普遍的内存分配规则，供大家学习。</p>
+<h2 id="对象优先在-Eden-分配"><a href="#对象优先在-Eden-分配" class="headerlink" title="对象优先在 Eden 分配"></a>对象优先在 Eden 分配</h2><p>大多数情况下，对象在新生代 Eden 区中分配。当 Eden 区没有足够空间进行分配时，虚拟机将发起一次 Minor GC。</p>
+<p>👇<strong>Minor GC</strong> vs <strong>Major GC</strong>/<strong>Full GC</strong>：</p>
+<ul>
+<li>Minor GC：回收新生代（包括 Eden 和 Survivor 区域），因为 Java 对象大多都具备朝生夕灭的特性，所以 Minor GC 非常频繁，一般回收速度也比较快。</li>
+<li>Major GC / Full GC: 回收老年代，出现了 Major GC，经常会伴随至少一次的 Minor GC，但这并非绝对。Major GC 的速度一般会比 Minor GC 慢 10 倍 以上。 </li>
+</ul>
+<blockquote>
+<p>在 JVM 规范中，Major GC 和 Full GC 都没有一个正式的定义，所以有人也简单地认为 Major GC 清理老年代，而 Full GC 清理整个内存堆。</p>
+</blockquote>
+<h2 id="大对象直接进入老年代"><a href="#大对象直接进入老年代" class="headerlink" title="大对象直接进入老年代"></a>大对象直接进入老年代</h2><p>大对象是指需要大量连续内存空间的 Java 对象，如很长的字符串或数据。</p>
+<p>一个大对象能够存入 Eden 区的概率比较小，发生分配担保的概率比较大，而分配担保需要涉及大量的复制，就会造成效率低下。</p>
+<p>虚拟机提供了一个 -XX:PretenureSizeThreshold 参数，令大于这个设置值的对象直接在老年代分配，这样做的目的是避免在 Eden 区及两个 Survivor 区之间发生大量的内存复制。（还记得吗，新生代采用复制算法回收垃圾）</p>
+<h2 id="长期存活的对象将进入老年代"><a href="#长期存活的对象将进入老年代" class="headerlink" title="长期存活的对象将进入老年代"></a>长期存活的对象将进入老年代</h2><p>JVM 给每个对象定义了一个对象年龄计数器。当新生代发生一次 Minor GC 后，存活下来的对象年龄 +1，当年龄超过一定值时，就将超过该值的所有对象转移到老年代中去。</p>
+<p>使用 -XXMaxTenuringThreshold 设置新生代的最大年龄，只要超过该参数的新生代对象都会被转移到老年代中去。</p>
+<h2 id="动态对象年龄判定"><a href="#动态对象年龄判定" class="headerlink" title="动态对象年龄判定"></a>动态对象年龄判定</h2><p>如果当前新生代的 Survivor 中，低于或等于某年龄的所有对象的大小总和大于 Survivor 空间的一半，年龄 &gt;= 该年龄的对象就可以直接进入老年代，无须等到 MaxTenuringThreshold 中要求的年龄。</p>
+<h2 id="空间分配担保"><a href="#空间分配担保" class="headerlink" title="空间分配担保"></a>空间分配担保</h2><p>JDK 6 Update 24 之前的规则是这样的：<br>在发生 Minor GC 之前，虚拟机会先检查<strong>老年代最大可用的连续空间是否大于新生代所有对象总空间</strong>， 如果这个条件成立，Minor GC 可以确保是安全的； 如果不成立，则虚拟机会查看 HandlePromotionFailure 值是否设置为允许担保失败， 如果是，那么会继续检查老年代最大可用的连续空间是否大于历次晋升到老年代对象的平均大小， 如果大于，将尝试进行一次 Minor GC,尽管这次 Minor GC 是有风险的； 如果小于，或者 HandlePromotionFailure 设置不允许冒险，那此时也要改为进行一次 Full GC。</p>
+<p>JDK 6 Update 24 之后的规则变为：<br>只要老年代的连续空间大于新生代对象总大小或者历次晋升的平均大小，就会进行 Minor GC，否则将进行 Full GC。</p>
+<p>通过清除老年代中废弃数据来扩大老年代空闲空间，以便给新生代作担保。</p>
+<p>这个过程就是分配担保。</p>
+<hr>
+<p>👇总结一下有哪些情况可能会触发 JVM 进行 Full GC。</p>
+<ol>
+<li><p>System.gc() 方法的调用<br><br>此方法的调用是建议 JVM 进行 Full GC，注意这<strong>只是建议而非一定</strong>，但在很多情况下它会触发 Full GC，从而增加 Full GC 的频率。通常情况下我们只需要让虚拟机自己去管理内存即可，我们可以通过 -XX:+ DisableExplicitGC 来禁止调用 System.gc()。</p>
+</li>
+<li><p>老年代空间不足<br><br>老年代空间不足会触发 Full GC操作，若进行该操作后空间依然不足，则会抛出如下错误：<br><br><code>java.lang.OutOfMemoryError: Java heap space</code></p>
+</li>
+<li><p>永久代空间不足(JDK 8之后使用元空间)<br><br>JVM 规范中运行时数据区域中的方法区，在 HotSpot 虚拟机中也称为永久代（Permanet Generation），存放一些类信息、常量、静态变量等数据，当系统要加载的类、反射的类和调用的方法较多时，永久代可能会被占满，会触发 Full GC。如果经过 Full GC 仍然回收不了，那么 JVM 会抛出如下错误信息：<br><br><code>java.lang.OutOfMemoryError: PermGen space </code></p>
+</li>
+<li><p>CMS GC 时出现 promotion failed 和 concurrent mode failure<br><br>promotion failed，就是上文所说的担保失败，而 concurrent mode failure 是在执行 CMS GC 的过程中同时有对象要放入老年代，而此时老年代空间不足造成的。</p>
+</li>
+<li><p>统计得到的Minor GC晋升到旧生代的平均大小大于老年代的剩余空间</p>
+</li>
+</ol>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
     <link itemprop="mainEntityOfPage" href="http://fatefrank.github.io/2020/07/18/04-hotspot-gc/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -858,269 +957,6 @@
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="http://fatefrank.github.io/2020/07/06/redis%E7%9A%84%E5%AE%89%E8%A3%85%E4%B8%8E%E4%BD%BF%E7%94%A8/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Seif Zheng">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Seif Zheng's blog">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2020/07/06/redis%E7%9A%84%E5%AE%89%E8%A3%85%E4%B8%8E%E4%BD%BF%E7%94%A8/" class="post-title-link" itemprop="url">redis的安装与使用</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-07-06 00:00:00" itemprop="dateCreated datePublished" datetime="2020-07-06T00:00:00+08:00">2020-07-06</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-08-04 15:49:28" itemprop="dateModified" datetime="2020-08-04T15:49:28+08:00">2020-08-04</time>
-              </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h2 id="redis"><a href="#redis" class="headerlink" title="redis"></a>redis</h2><h3 id="redis的安装和配置"><a href="#redis的安装和配置" class="headerlink" title="redis的安装和配置"></a>redis的安装和配置</h3><ol>
-<li><p>到官方网站下载最新稳定版的redis压缩包</p>
-</li>
-<li><p>上传到/home/software</p>
-</li>
-<li><p>解压redis压缩包</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">tar -zxvf  redis-5.0.8.tar.gz</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>下载 gcc依赖</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">yum install gcc-c++</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>编译</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">make</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>安装</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">make install</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>将redis的启动脚本拷贝出来</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">cp &#x2F;home&#x2F;software&#x2F;redis-5.0.8&#x2F;utils&#x2F;redis_init_script &#x2F;etc&#x2F;init.d</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>创建redis目录</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">mkdir &#x2F;usr&#x2F;local&#x2F;redis -p</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>redis配置文件拷贝到redis目录下</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">cp &#x2F;home&#x2F;software&#x2F;redis-5.0.8&#x2F;redis.conf &#x2F;usr&#x2F;local&#x2F;redis</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>编辑redis.conf文件</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash">后台运行redis</span></span><br><span class="line">daemonize yes    </span><br><span class="line">...</span><br><span class="line"><span class="meta">#</span><span class="bash">指定redis的工作空间，记得创建working</span></span><br><span class="line">dir /usr/local/redis/working    </span><br><span class="line">...</span><br><span class="line"><span class="meta">#</span><span class="bash">使redis能允许外部访问</span></span><br><span class="line">bind 0.0.0.0</span><br><span class="line">...</span><br><span class="line"><span class="meta">#</span><span class="bash">设置redis的密码</span></span><br><span class="line">requirepass 123456</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>修改redis启动脚本文件 /etc/init.d/redis_init_script </p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> REDISPORT 和 PIDFILE 如果要修改，要与redis.conf文件对应</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 指定redis配置文件的位置</span></span><br><span class="line">CONF=&quot;/usr/local/redis/redis.conf&quot;</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 赋予stop指令密码</span></span><br><span class="line"><span class="meta">$</span><span class="bash">CLIEXEC -a <span class="string">&quot;123456&quot;</span> -p <span class="variable">$REDISPORT</span> shutdown</span></span><br></pre></td></tr></table></figure>
-</li>
-<li><p>给redis启动脚本文件加上权限</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">chmod 777 &#x2F;etc&#x2F;init.d&#x2F;redis_init_script  </span><br></pre></td></tr></table></figure>
-</li>
-<li><p>启动redis，关闭redis</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">./redis_init_script start</span><br><span class="line">./redis_init_script stop            # 需要在redis_init_script中配置密码</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>配置redis开机自启动，编辑/etc/init.d/redis_init_script ，加上</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">#chkconfig: 22345 10 90 </span><br><span class="line">#description: Start and Stop redis</span><br></pre></td></tr></table></figure>
-
-<p>再将脚本注册到开机字启动</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">chkconfig redis_init_script on</span><br></pre></td></tr></table></figure>
-
-
-
-</li>
-</ol>
-<h3 id="redis的常用客户端命令"><a href="#redis的常用客户端命令" class="headerlink" title="redis的常用客户端命令"></a>redis的常用客户端命令</h3><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 进入命令行</span></span><br><span class="line">redis-cli</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 通过密码赋予权限</span></span><br><span class="line">auth 123456</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 切换数据库，默认16个</span></span><br><span class="line">select 4</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 清空当前数据库</span></span><br><span class="line">flushdb</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 清空所有数据库</span></span><br><span class="line">flushall</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 存入或更新string类型数据 </span></span><br><span class="line">set name imooc</span><br><span class="line">set age 18</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 存入string类型数据, 不更新</span></span><br><span class="line">setnx age 20</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 根据key查询</span></span><br><span class="line">get name</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 删除指定key</span></span><br><span class="line">del name</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 获取key集合，不推荐</span></span><br><span class="line">keys *</span><br><span class="line">keys a*</span><br><span class="line">keys *e</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 获取key所对应的value的类型</span></span><br><span class="line">type age </span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 获取指定key的剩余有效时间，-1代表永久有效；-2代表key不存在，或已失效</span></span><br><span class="line">ttl age</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 设置age的剩余有效时间为30s</span></span><br><span class="line">expire age 30</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 存入vip并设置有效时间为20s</span></span><br><span class="line">set vip yes ex 20</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 为name所对应的值后面加上123</span></span><br><span class="line">append name 123</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 查询name的长度</span></span><br><span class="line">strlen name</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> age的值加1, 注意如果对name使用会报错，下同</span></span><br><span class="line">incr age</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> age的值减1</span></span><br><span class="line">decr age</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> age的值加5</span></span><br><span class="line">incrby age 5</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> age的值减5</span></span><br><span class="line">decrby age 5</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 截取name的值, 左闭右闭，-1代表无穷大</span></span><br><span class="line">getrange name 0 -1</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 从指定位置开始更新name</span></span><br><span class="line">setrange name 1 abc</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 统一多个存入或更新</span></span><br><span class="line">mset k1 aa k2 bb</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 统一多个存入，一个失败全失败</span></span><br><span class="line">msetnx k2 bbb k3 cc</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 统一多个查询</span></span><br><span class="line">mget k1 k2</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash">redis中的<span class="built_in">hash</span>数据类型，相当于键值对集合</span></span><br><span class="line">user &#123;</span><br><span class="line">    name:imooc</span><br><span class="line">    age:18</span><br><span class="line">    sex:man</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 存入<span class="built_in">hash</span>类型数据user，有一个属性为name，值为imooc</span></span><br><span class="line">hset user name imooc</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 获取user的name属性值</span></span><br><span class="line">hget user name</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 同时设置多个user的属性</span></span><br><span class="line">hmset user age 18 sex man</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 同时获取多个user的属性</span></span><br><span class="line">hmget user age sex name</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 获取user的所有属性名和属性值</span></span><br><span class="line">hgetall user</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 获取user的属性个数</span></span><br><span class="line">hlen user</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 获取user的属性名集合</span></span><br><span class="line">hkeys user</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 获取user的属性值集合</span></span><br><span class="line">hvals user</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> user的age属性加5</span></span><br><span class="line">hincrby user age 5</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> user的age属性加2.2</span></span><br><span class="line">hincrbyfloat age 2.2</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 判断user的name属性是否存在</span></span><br><span class="line">hexist user name</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 删除user的name属性，无法直接删除user，要一个个属性删完</span></span><br><span class="line">hdel user name</span><br></pre></td></tr></table></figure>
-
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash">redis中的list数据类型，相当于双端队列</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 从左进队</span></span><br><span class="line">lpush list1 pig cow sheep chicken duck</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 从右进队</span></span><br><span class="line">rpush list2 pig cow sheep chicken duck</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 根据索引从左往右获取值</span></span><br><span class="line">lrange list1 0 -1</span><br><span class="line">lrange list2 0 -1</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 从左出队一个</span></span><br><span class="line">lpop list1</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 从右出队一个</span></span><br><span class="line">rpop list1</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 获取队列长度</span></span><br><span class="line">llen list1</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 根据索引获取队列中的值</span></span><br><span class="line">lindex list1 2</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 根据索引更新队列中的值</span></span><br><span class="line">lset list1 1 1001</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 往队列list1中的1001前插入aaa</span></span><br><span class="line">linsert list1 before 1001 aaa</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 往队列list1中的1001后插入aaa</span></span><br><span class="line">linsert list1 after 1001 aaa</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 在队列list1中删除2个aaa</span></span><br><span class="line">lrem list1 2 aaa</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 根据索引截取list1，作为新队列</span></span><br><span class="line">ltrim list1 1 2</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 删除队列list1</span></span><br><span class="line">del list1</span><br></pre></td></tr></table></figure>
-
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> redis中的<span class="built_in">set</span>数据类型，相当于数学中的集合</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 设置set1，重复的元素添加无效</span></span><br><span class="line">sadd set1 duck pig cow sheep sheep sheep pig</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 获取set1的所有元素</span></span><br><span class="line">smembers set1</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> set1的元素个数</span></span><br><span class="line">scard set1</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 判断pig是否为set1的元素</span></span><br><span class="line">sismember set1 pig</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 删除set1的duck元素</span></span><br><span class="line">srem set1 duck</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 从set1中随机弹出1个元素</span></span><br><span class="line">spop set1</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 从set1中随机弹出2个元素</span></span><br><span class="line">spop set1 2</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 随机获取set1的3个元素</span></span><br><span class="line">srandmember set1 3</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 将set1的cow元素移动到set2</span></span><br><span class="line">smove set1 set2 cow</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 求set1和set2的差集，set1有，set2没有</span></span><br><span class="line">sdiff set1 set2  </span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 求set1和set2的交集</span></span><br><span class="line">sinter set1 set2</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 求set1和set2的并集</span></span><br><span class="line">sunion set1 set2</span><br></pre></td></tr></table></figure>
-
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> redis的zset数据类型相当于有序集合sorted <span class="built_in">set</span></span></span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 设置zset1,包含权重</span></span><br><span class="line">zadd zset1 10 duck 20 pig 30 chicken 40 beef 50 sheep</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 二次添加zset1，会根据score自动排序，重复的元素更新score无效</span></span><br><span class="line">zadd zset1 25 bird 35 dog</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 根据索引范围获取zset元素，-1代表无穷大 </span></span><br><span class="line">zrange zset1 0 -1</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 根据索引范围获取zset元素加score，-1代表无穷大 </span></span><br><span class="line">zrange zset1 0 -1 withscores</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 获取20&lt;=score&lt;=40的元素(附带score)</span></span><br><span class="line">zrangebyscore zset1 20 40 withscores</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 获取20&lt;score&lt;40的元素(附带score)</span></span><br><span class="line">zrangebyscore zset1 (20 (40 withscores</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 获取20&lt;=score&lt;=40的元素(附带score)，再从中根据索引(<span class="built_in">limit</span> offset count)筛选</span></span><br><span class="line">zrangebyscore zset1 20 40 withscores limit 1 2</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 获取zset1中beef的索引</span></span><br><span class="line">zrank zset1 beef</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 获取zset1中beef的分数</span></span><br><span class="line">zscore zset1 beef</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 获取zset1的元素个数</span></span><br><span class="line">zcard zset1 </span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 获取20&lt;=score&lt;=40的元素个数</span></span><br><span class="line">zcount zset1 20 40</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 删除zset1中的pig，sheep元素</span></span><br><span class="line">zrem zset1 pig sheep</span><br></pre></td></tr></table></figure>
-
-
-
-<h3 id="redis整合进SpringBoot"><a href="#redis整合进SpringBoot" class="headerlink" title="redis整合进SpringBoot"></a>redis整合进SpringBoot</h3><figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># application-*.yml文件</span></span><br><span class="line"></span><br><span class="line"><span class="attr">spring:</span></span><br><span class="line">  <span class="attr">redis:</span></span><br><span class="line">    <span class="attr">database:</span> <span class="number">1</span></span><br><span class="line">    <span class="attr">host:</span> <span class="number">192.168</span><span class="number">.200</span><span class="number">.201</span></span><br><span class="line">    <span class="attr">port:</span> <span class="number">6379</span></span><br><span class="line">    <span class="attr">password:</span> <span class="number">123456</span>    </span><br></pre></td></tr></table></figure>
-
-<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!-- 引入redis依赖 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.springframework.boot<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>spring-boot-starter-data-redis<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
-
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.imooc.controller;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> com.imooc.utils.RedisOperator;</span><br><span class="line"><span class="keyword">import</span> org.springframework.beans.factory.annotation.Autowired;</span><br><span class="line"><span class="keyword">import</span> org.springframework.web.bind.annotation.GetMapping;</span><br><span class="line"><span class="keyword">import</span> org.springframework.web.bind.annotation.RequestMapping;</span><br><span class="line"><span class="keyword">import</span> org.springframework.web.bind.annotation.RestController;</span><br><span class="line"><span class="keyword">import</span> springfox.documentation.annotations.ApiIgnore;</span><br><span class="line"></span><br><span class="line"><span class="meta">@ApiIgnore</span></span><br><span class="line"><span class="meta">@RestController</span></span><br><span class="line"><span class="meta">@RequestMapping(&quot;/redis&quot;)</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">RedisController</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> RedisOperator redisOperator;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@GetMapping(&quot;/set&quot;)</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Object <span class="title">set</span><span class="params">(String key, String value)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">        redisOperator.set(key, value);</span><br><span class="line">        <span class="keyword">return</span> <span class="string">&quot;OK&quot;</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@GetMapping(&quot;/get&quot;)</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Object <span class="title">get</span><span class="params">(String key)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> redisOperator.get(key);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@GetMapping(&quot;/delete&quot;)</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Object <span class="title">delete</span><span class="params">(String key)</span> </span>&#123;</span><br><span class="line">        redisOperator.del(key);</span><br><span class="line">        <span class="keyword">return</span> <span class="string">&quot;OK&quot;</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-
-
-<h3 id="redis的发布和订阅"><a href="#redis的发布和订阅" class="headerlink" title="redis的发布和订阅"></a>redis的发布和订阅</h3><p>不重要的功能，有消息队列替代，参考<a target="_blank" rel="noopener" href="http://redisdoc.com/pubsub/index.html">http://redisdoc.com/pubsub/index.html</a></p>
-<h3 id="redis的持久化机制"><a href="#redis的持久化机制" class="headerlink" title="redis的持久化机制"></a>redis的持久化机制</h3><p>Redis 提供了多种不同级别的持久化方式：</p>
-<ul>
-<li>RDB 持久化可以在指定的时间间隔内生成数据集的时间点快照（point-in-time snapshot）。</li>
-<li>AOF 持久化记录服务器执行的所有写操作命令，并在服务器启动时，通过重新执行这些命令来还原数据集。 AOF 文件中的命令全部以 Redis 协议的格式来保存，新命令会被追加到文件的末尾。 Redis 还可以在后台对 AOF 文件进行重写（rewrite），使得 AOF 文件的体积不会超出保存数据集状态所需的实际大小。</li>
-<li>Redis 还可以同时使用 AOF 持久化和 RDB 持久化。 在这种情况下， 当 Redis 重启时， 它会优先使用 AOF 文件来还原数据集， 因为 AOF 文件保存的数据集通常比 RDB 文件所保存的数据集更完整。</li>
-<li>你甚至可以关闭持久化功能，让数据只在服务器运行时存在。</li>
-</ul>
-<p>了解 RDB 持久化和 AOF 持久化之间的异同是非常重要的， 以下几个小节将详细地介绍这这两种持久化功能， 并对它们的相同和不同之处进行</p>
-<h4 id="RDB-的优点"><a href="#RDB-的优点" class="headerlink" title="RDB 的优点"></a>RDB 的优点</h4><ul>
-<li>RDB 是一个非常紧凑（compact）的文件，它保存了 Redis 在某个时间点上的数据集。 这种文件非常适合用于进行备份： 比如说，你可以在最近的 24 小时内，每小时备份一次 RDB 文件，并且在每个月的每一天，也备份一个 RDB 文件。 这样的话，即使遇上问题，也可以随时将数据集还原到不同的版本。</li>
-<li>RDB 非常适用于灾难恢复（disaster recovery）：它只有一个文件，并且内容都非常紧凑，可以（在加密后）将它传送到别的数据中心，或者亚马逊 S3 中。</li>
-<li>RDB 可以最大化 Redis 的性能：父进程在保存 RDB 文件时唯一要做的就是 <code>fork</code> 出一个子进程，然后这个子进程就会处理接下来的所有保存工作，父进程无须执行任何磁盘 I/O 操作。</li>
-<li>RDB 在恢复大数据集时的速度比 AOF 的恢复速度要快。</li>
-</ul>
-<h4 id="RDB-的缺点"><a href="#RDB-的缺点" class="headerlink" title="RDB 的缺点"></a>RDB 的缺点</h4><ul>
-<li>如果你需要尽量避免在服务器故障时丢失数据，那么 RDB 不适合你。 虽然 Redis 允许你设置不同的保存点（save point）来控制保存 RDB 文件的频率， 但是， 因为<u>RDB 文件需要保存整个数据集的状态</u>， 所以它并不是一个轻松的操作。 因此你可能会至少 5 分钟才保存一次 RDB 文件。 在这种情况下， 一旦发生故障停机， 你就可能会丢失好几分钟的数据。</li>
-<li>每次保存 RDB 的时候，Redis 都要 <code>fork()</code> 出一个子进程，并由子进程来进行实际的持久化工作。 在数据集比较庞大时， <code>fork()</code> 可能会非常耗时，造成服务器在某某毫秒内停止处理客户端； 如果数据集非常巨大，并且 CPU 时间非常紧张的话，那么这种停止时间甚至可能会长达整整一秒。 虽然 AOF 重写也需要进行 <code>fork()</code> ，但无论 AOF 重写的执行间隔有多长，数据的耐久性都不会有任何损失。</li>
-</ul>
-<h4 id="AOF-的优点"><a href="#AOF-的优点" class="headerlink" title="AOF 的优点"></a>AOF 的优点</h4><ul>
-<li>使用 AOF 持久化会让 Redis 变得非常耐久（much more durable）：你可以设置不同的 <code>fsync</code> 策略，比如无 <code>fsync</code> ，每秒钟一次 <code>fsync</code> ，或者每次执行写入命令时 <code>fsync</code> 。 AOF 的默认策略为每秒钟 <code>fsync</code> 一次，在这种配置下，Redis 仍然可以保持良好的性能，并且就算发生故障停机，也最多只会丢失一秒钟的数据（ <code>fsync</code> 会在后台线程执行，所以主线程可以继续努力地处理命令请求）。</li>
-<li>AOF 文件是一个只进行追加操作的日志文件（append only log）， 因此对 AOF 文件的写入不需要进行 <code>seek</code> ， 即使日志因为某些原因而包含了未写入完整的命令（比如写入时磁盘已满，写入中途停机，等等）， <code>redis-check-aof</code> 工具也可以轻易地修复这种问题。</li>
-<li>Redis 可以在 AOF 文件体积变得过大时，自动地在后台对 AOF 进行重写： 重写后的新 AOF 文件包含了恢复当前数据集所需的最小命令集合。 <u>整个重写操作是绝对安全的</u>，因为 Redis 在创建新 AOF 文件的过程中，会继续将命令追加到现有的 AOF 文件里面，即使重写过程中发生停机，现有的 AOF 文件也不会丢失。 而一旦新 AOF 文件创建完毕，Redis 就会从旧 AOF 文件切换到新 AOF 文件，并开始对新 AOF 文件进行追加操作。</li>
-<li>AOF 文件有序地保存了对数据库执行的所有写入操作， 这些写入操作<u>以 Redis 协议的格式保存</u>， 因此 AOF 文件的内容非常容易被人读懂， 对文件进行分析（parse）也很轻松。 导出（export） AOF 文件也非常简单： 举个例子， 如果你不小心执行了 <a target="_blank" rel="noopener" href="http://redisdoc.com/database/flushall.html#flushall">FLUSHALL</a> 命令， 但只要 AOF 文件未被重写， 那么只要停止服务器， 移除 AOF 文件末尾的 <a target="_blank" rel="noopener" href="http://redisdoc.com/database/flushall.html#flushall">FLUSHALL</a> 命令， 并重启 Redis ， 就可以将数据集恢复到 <a target="_blank" rel="noopener" href="http://redisdoc.com/database/flushall.html#flushall">FLUSHALL</a> 执行之前的状态。</li>
-</ul>
-<h4 id="AOF-的缺点"><a href="#AOF-的缺点" class="headerlink" title="AOF 的缺点"></a>AOF 的缺点</h4><ul>
-<li>对于相同的数据集来说，AOF 文件的体积通常要大于 RDB 文件的体积。</li>
-<li>根据所使用的 <code>fsync</code> 策略，AOF 的速度可能会慢于 RDB 。 在一般情况下， 每秒 <code>fsync</code> 的性能依然非常高， 而关闭 <code>fsync</code> 可以让 AOF 的速度和 RDB 一样快， 即使在高负荷之下也是如此。 不过在处理巨大的写入载入时，RDB 可以提供更有保证的最大延迟时间（latency）。</li>
-<li>AOF 在过去曾经发生过这样的 bug ： 因为个别命令的原因，导致 AOF 文件在重新载入时，无法将数据集恢复成保存时的原样。 （举个例子，阻塞命令 <a target="_blank" rel="noopener" href="http://redisdoc.com/list/brpoplpush.html#brpoplpush">BRPOPLPUSH source destination timeout</a> 就曾经引起过这样的 bug 。） 测试套件里为这种情况添加了测试： 它们会自动生成随机的、复杂的数据集， 并通过重新载入这些数据来确保一切正常。 虽然这种 bug 在 AOF 文件中并不常见， 但是对比来说， RDB 几乎是不可能出现这种 bug 的。</li>
-</ul>
-<h4 id="RDB-和-AOF-，我应该用哪一个？"><a href="#RDB-和-AOF-，我应该用哪一个？" class="headerlink" title="RDB 和 AOF ，我应该用哪一个？"></a>RDB 和 AOF ，我应该用哪一个？</h4><p>一般来说， 如果想达到足以媲美 PostgreSQL 的数据安全性， 你应该同时使用两种持久化功能。</p>
-<p>如果你非常关心你的数据， 但仍然可以承受数分钟以内的数据丢失， 那么你可以只使用 RDB 持久化。</p>
-<p>有很多用户都只使用 AOF 持久化， 但我们并不推荐这种方式： 因为定时生成 RDB 快照（snapshot）非常便于进行数据库备份， 并且 RDB 恢复数据集的速度也要比 AOF 恢复的速度要快， 除此之外， 使用 RDB 还可以避免之前提到的 AOF 程序的 bug 。</p>
-<h4 id="快照的运作方式"><a href="#快照的运作方式" class="headerlink" title="快照的运作方式"></a>快照的运作方式</h4><p>当 Redis 需要保存 <code>dump.rdb</code> 文件时， 服务器执行以下操作：</p>
-<ol>
-<li>Redis 调用 <code>fork()</code> ，同时拥有父进程和子进程。</li>
-<li>子进程将数据集写入到一个临时 RDB 文件中。</li>
-<li>当子进程完成对新 RDB 文件的写入时，Redis 用新 RDB 文件替换原来的 RDB 文件，并删除旧的 RDB 文件。</li>
-</ol>
-<p>这种工作方式使得 Redis 可以从<u>写时复制（copy-on-write）机制</u>中获益。</p>
-<h4 id="只进行追加操作的文件（append-only-file，AOF）"><a href="#只进行追加操作的文件（append-only-file，AOF）" class="headerlink" title="只进行追加操作的文件（append-only file，AOF）"></a>只进行追加操作的文件（append-only file，AOF）</h4><p>快照功能并不是非常耐久（durable）： 如果 Redis 因为某些原因而造成故障停机， 那么服务器将丢失最近写入、且仍未保存到快照中的那些数据。</p>
-<p>尽管对于某些程序来说， 数据的耐久性并不是最重要的考虑因素， 但是对于那些追求完全耐久能力（full durability）的程序来说， 快照功能就不太适用了。</p>
-<p>从 1.1 版本开始， Redis 增加了一种完全耐久的持久化方式： AOF 持久化。</p>
-<p>你可以通过修改配置文件来打开 AOF 功能：</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">appendonly yes</span><br></pre></td></tr></table></figure>
-
-<p>从现在开始， 每当 Redis 执行一个改变数据集的命令时（比如 [SET key value <a target="_blank" rel="noopener" href="http://redisdoc.com/string/set.html#set">EX seconds] [PX milliseconds] [NX|XX]</a>）， 这个命令就会被追加到 AOF 文件的末尾。</p>
-<p>这样的话， 当 Redis 重新启时， 程序就可以通过重新执行 AOF 文件中的命令来达到重建数据集的目的。</p>
-<h4 id="AOF-重写"><a href="#AOF-重写" class="headerlink" title="AOF 重写"></a>AOF 重写</h4><p>因为 AOF 的运作方式是不断地将命令追加到文件的末尾， 所以随着写入命令的不断增加， AOF 文件的体积也会变得越来越大。</p>
-<p>举个例子， 如果你对一个计数器调用了 100 次 <a target="_blank" rel="noopener" href="http://redisdoc.com/string/incr.html#incr">INCR key</a> ， 那么仅仅是为了保存这个计数器的当前值， AOF 文件就需要使用 100 条记录（entry）。</p>
-<p>然而在实际上， 只使用一条 [SET key value <a target="_blank" rel="noopener" href="http://redisdoc.com/string/set.html#set">EX seconds] [PX milliseconds] [NX|XX]</a> 命令已经足以保存计数器的当前值了， 其余 99 条记录实际上都是多余的。</p>
-<p>为了处理这种情况， Redis 支持一种有趣的特性： 可以在不打断服务客户端的情况下， 对 AOF 文件进行重建（rebuild）。</p>
-<p>执行 <a target="_blank" rel="noopener" href="http://redisdoc.com/persistence/bgrewriteaof.html#bgrewriteaof">BGREWRITEAOF</a> 命令， Redis 将生成一个新的 AOF 文件， 这个文件包含重建当前数据集所需的最少命令。</p>
-<p>Redis 2.2 需要自己手动执行 <a target="_blank" rel="noopener" href="http://redisdoc.com/persistence/bgrewriteaof.html#bgrewriteaof">BGREWRITEAOF</a> 命令； Redis 2.4 则可以自动触发 AOF 重写， 具体信息请查看 2.4 的示例配置文件。</p>
-<h4 id="AOF-的耐久性如何？"><a href="#AOF-的耐久性如何？" class="headerlink" title="AOF 的耐久性如何？"></a>AOF 的耐久性如何？</h4><p>你可以配置 Redis 多久才将数据 <code>fsync</code> 到磁盘一次。</p>
-<p>有三个选项：</p>
-<ul>
-<li>每次有新命令追加到 AOF 文件时就执行一次 <code>fsync</code> ：非常慢，也非常安全。</li>
-<li>每秒 <code>fsync</code> 一次：足够快（和使用 RDB 持久化差不多），并且在故障时只会丢失 1 秒钟的数据。</li>
-<li>从不 <code>fsync</code> ：将数据交给操作系统来处理。更快，也更不安全的选择。</li>
-</ul>
-<p>推荐（并且也是默认）的措施为每秒 <code>fsync</code> 一次， 这种 <code>fsync</code> 策略可以兼顾速度和安全性。</p>
-<p>总是 <code>fsync</code> 的策略在实际使用中非常慢， 即使在 Redis 2.0 对相关的程序进行了改进之后仍是如此 —— 频繁调用 <code>fsync</code> 注定了这种策略不可能快得起来。</p>
-<h4 id="如果-AOF-文件出错了，怎么办？"><a href="#如果-AOF-文件出错了，怎么办？" class="headerlink" title="如果 AOF 文件出错了，怎么办？"></a>如果 AOF 文件出错了，怎么办？</h4><p>服务器可能在程序正在对 AOF 文件进行写入时停机， 如果停机造成了 AOF 文件出错（corrupt）， 那么 Redis 在重启时会拒绝载入这个 AOF 文件， 从而确保数据的一致性不会被破坏。</p>
-<p>当发生这种情况时， 可以用以下方法来修复出错的 AOF 文件：</p>
-<ol>
-<li>为现有的 AOF 文件创建一个备份。</li>
-<li>使用 Redis 附带的 <code>redis-check-aof</code> 程序，对原来的 AOF 文件进行修复。</li>
-</ol>
-<blockquote>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> redis-check-aof --fix</span></span><br></pre></td></tr></table></figure>
-</blockquote>
-<ol start="3">
-<li><p>（可选）使用 <code>diff -u</code> 对比修复后的 AOF 文件和原始 AOF 文件的备份，查看两个文件之间的不同之处。</p>
-</li>
-<li><p>重启 Redis 服务器，等待服务器载入修复后的 AOF 文件，并进行数据恢复。</p>
-</li>
-</ol>
-<h4 id="AOF-的运作方式"><a href="#AOF-的运作方式" class="headerlink" title="AOF 的运作方式"></a>AOF 的运作方式</h4><p>AOF 重写和 RDB 创建快照一样，都巧妙地利用了写时复制机制。</p>
-<p>以下是 AOF 重写的执行步骤：</p>
-<ol>
-<li>Redis 执行 <code>fork()</code> ，现在同时拥有父进程和子进程。</li>
-<li>子进程开始将新 AOF 文件的内容写入到临时文件。</li>
-<li>对于所有新执行的写入命令，父进程一边将它们累积到一个内存缓存中，一边将这些改动追加到现有 AOF 文件的末尾： 这样即使在重写的中途发生停机，现有的 AOF 文件也还是安全的。</li>
-<li>当子进程完成重写工作时，它给父进程发送一个信号，父进程在接收到信号之后，将内存缓存中的所有数据追加到新 AOF 文件的末尾。</li>
-<li>搞定！现在 Redis 原子地用新文件替换旧文件，之后所有命令都会直接追加到新 AOF 文件的末尾。</li>
-</ol>
-<h4 id="怎么从-RDB-持久化切换到-AOF-持久化"><a href="#怎么从-RDB-持久化切换到-AOF-持久化" class="headerlink" title="怎么从 RDB 持久化切换到 AOF 持久化"></a>怎么从 RDB 持久化切换到 AOF 持久化</h4><p>在 Redis 2.2 或以上版本，可以在不重启的情况下，从 RDB 切换到 AOF ：</p>
-<ol>
-<li>为最新的 <code>dump.rdb</code> 文件创建一个备份。</li>
-<li>将备份放到一个安全的地方。</li>
-<li>执行以下两条命令：</li>
-</ol>
-<blockquote>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">redis-cli&gt;</span><span class="bash"> CONFIG SET appendonly yes</span></span><br><span class="line"><span class="meta">redis-cli&gt;</span><span class="bash"> CONFIG SET save <span class="string">&quot;&quot;</span></span></span><br></pre></td></tr></table></figure>
-</blockquote>
-<ol start="4">
-<li><p>确保命令执行之后，数据库的键的数量没有改变。</p>
-</li>
-<li><p>确保写命令会被正确地追加到 AOF 文件的末尾。</p>
-</li>
-</ol>
-<p>步骤 3 执行的第一条命令开启了 AOF 功能： Redis 会阻塞直到初始 AOF 文件创建完成为止， 之后 Redis 会继续处理命令请求， 并开始将写入命令追加到 AOF 文件末尾。</p>
-<p>步骤 3 执行的第二条命令用于关闭 RDB 功能。 这一步是可选的， 如果你愿意的话， 也可以同时使用 RDB 和 AOF 这两种持久化功能。</p>
-<h4 id="RDB-和-AOF-之间的相互作用"><a href="#RDB-和-AOF-之间的相互作用" class="headerlink" title="RDB 和 AOF 之间的相互作用"></a>RDB 和 AOF 之间的相互作用</h4><p>在版本号大于等于 2.4 的 Redis 中， <a target="_blank" rel="noopener" href="http://redisdoc.com/persistence/bgsave.html#bgsave">BGSAVE</a> 执行的过程中， 不可以执行 <a target="_blank" rel="noopener" href="http://redisdoc.com/persistence/bgrewriteaof.html#bgrewriteaof">BGREWRITEAOF</a> 。 反过来说， 在 <a target="_blank" rel="noopener" href="http://redisdoc.com/persistence/bgrewriteaof.html#bgrewriteaof">BGREWRITEAOF</a> 执行的过程中， 也不可以执行 <a target="_blank" rel="noopener" href="http://redisdoc.com/persistence/bgsave.html#bgsave">BGSAVE</a> 。</p>
-<p>这可以防止两个 Redis 后台进程同时对磁盘进行大量的 I/O 操作。</p>
-<p>如果 <a target="_blank" rel="noopener" href="http://redisdoc.com/persistence/bgsave.html#bgsave">BGSAVE</a> 正在执行， 并且用户显示地调用 <a target="_blank" rel="noopener" href="http://redisdoc.com/persistence/bgrewriteaof.html#bgrewriteaof">BGREWRITEAOF</a> 命令， 那么服务器将向用户回复一个 <code>OK</code> 状态， 并告知用户， <a target="_blank" rel="noopener" href="http://redisdoc.com/persistence/bgrewriteaof.html#bgrewriteaof">BGREWRITEAOF</a> 已经被预定执行： 一旦 <a target="_blank" rel="noopener" href="http://redisdoc.com/persistence/bgsave.html#bgsave">BGSAVE</a> 执行完毕， <a target="_blank" rel="noopener" href="http://redisdoc.com/persistence/bgrewriteaof.html#bgrewriteaof">BGREWRITEAOF</a> 就会正式开始。</p>
-<p>当 Redis 启动时， 如果 RDB 持久化和 AOF 持久化都被打开了， 那么程序会优先使用 AOF 文件来恢复数据集， 因为 AOF 文件所保存的数据通常是最完整的。</p>
-<p>备注：</p>
-<p><a target="_blank" rel="noopener" href="http://redisdoc.com/persistence/bgsave.html#bgsave">BGSAVE</a> ：在后台异步(Asynchronously)保存当前数据库的数据到磁盘。</p>
-<p><a target="_blank" rel="noopener" href="http://redisdoc.com/persistence/bgrewriteaof.html#bgrewriteaof">BGREWRITEAOF</a> ：执行一个 <a target="_blank" rel="noopener" href="http://redis.io/topics/persistence#append-only-file">AOF文件</a> 重写操作。重写会创建一个当前 AOF 文件的体积优化版本。</p>
-<h4 id="备份-Redis-数据"><a href="#备份-Redis-数据" class="headerlink" title="备份 Redis 数据"></a>备份 Redis 数据</h4><p>在阅读这个小节前， 先将下面这句话铭记于心： 一定要备份你的数据库！</p>
-<p>磁盘故障， 节点失效， 诸如此类的问题都可能让你的数据消失不见， 不进行备份是非常危险的。</p>
-<p>Redis 对于数据备份是非常友好的， 因为你可以在服务器运行的时候对 RDB 文件进行复制： RDB 文件一旦被创建， 就不会进行任何修改。 当服务器要创建一个新的 RDB 文件时， 它先将文件的内容保存在一个临时文件里面， 当临时文件写入完毕时， 程序才使用 <code>rename(2)</code> 原子地用临时文件替换原来的 RDB 文件。</p>
-<p>这也就是说， 无论何时， 复制 RDB 文件都是绝对安全的。</p>
-<p>以下是我们的建议：</p>
-<ul>
-<li>创建一个定期任务（cron job）， 每小时将一个 RDB 文件备份到一个文件夹， 并且每天将一个 RDB 文件备份到另一个文件夹。</li>
-<li>确保快照的备份都带有相应的日期和时间信息， 每次执行定期任务脚本时， 使用 <code>find</code> 命令来删除过期的快照： 比如说， 你可以保留最近 48 小时内的每小时快照， 还可以保留最近一两个月的每日快照。</li>
-<li>至少每天一次， 将 RDB 备份到你的数据中心之外， 或者至少是备份到你运行 Redis 服务器的物理机器之外。</li>
-</ul>
-<h4 id="容灾备份"><a href="#容灾备份" class="headerlink" title="容灾备份"></a>容灾备份</h4><p>Redis 的容灾备份基本上就是对数据进行备份， 并将这些备份传送到多个不同的外部数据中心。</p>
-<p>容灾备份可以在 Redis 运行并产生快照的主数据中心发生严重的问题时， 仍然让数据处于安全状态。</p>
-<p>因为很多 Redis 用户都是创业者， 他们没有大把大把的钱可以浪费， 所以下面介绍的都是一些实用又便宜的容灾备份方法：</p>
-<ul>
-<li>Amazon S3 ，以及其他类似 S3 的服务，是一个构建灾难备份系统的好地方。 最简单的方法就是将你的每小时或者每日 RDB 备份加密并传送到 S3 。 对数据的加密可以通过 <code>gpg -c</code> 命令来完成（对称加密模式）。 记得把你的密码放到几个不同的、安全的地方去（比如你可以把密码复制给你组织里最重要的人物）。 同时使用多个储存服务来保存数据文件，可以提升数据的安全性。</li>
-<li>传送快照可以使用 SCP 来完成（SSH 的组件）。 以下是简单并且安全的传送方法： 买一个离你的数据中心非常远的 VPS ， 装上 SSH ， 创建一个无口令的 SSH 客户端 key ， 并将这个 key 添加到 VPS 的 authorized_keys 文件中， 这样就可以向这个 VPS 传送快照备份文件了。 为了达到最好的数据安全性，至少要从两个不同的提供商那里各购买一个 VPS 来进行数据容灾备份。</li>
-</ul>
-<p>需要注意的是， 这类容灾系统如果没有小心地进行处理的话， 是很容易失效的。</p>
-<p>最低限度下， 你应该在文件传送完毕之后， 检查所传送备份文件的体积和原始快照文件的体积是否相同。 如果你使用的是 VPS ， 那么还可以通过比对文件的 SHA1 校验和来确认文件是否传送完整。</p>
-<p>另外， 你还需要一个独立的警报系统， 让它在负责传送备份文件的传送器（transfer）失灵时通知你。</p>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
 
   
   <nav class="pagination">
@@ -1192,7 +1028,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">11</span>
+          <span class="site-state-item-count">12</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
