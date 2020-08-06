@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.0.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"fatefrank.github.io","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="推荐去撸一撸 Spring MVC 的源码，特别是如下两篇：  《精尽 Spring MVC 源码分析 —— 组件一览》 《精尽 Spring MVC 源码分析 —— 请求处理一览》  考虑到 Spring MVC 和 Rest 关系比较大，所以本文一共分成两大块：  Spring MVC REST  Spring MVCSpring MVC 框架有什么用？Spring Web MVC 框架提供”">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Spring MVC 面试题">
+<meta property="og:url" content="http://fatefrank.github.io/2020/08/06/Spring%20MVC%20%E9%9D%A2%E8%AF%95%E9%A2%98/index.html">
+<meta property="og:site_name" content="Seif Zheng&#39;s blog">
+<meta property="og:description" content="推荐去撸一撸 Spring MVC 的源码，特别是如下两篇：  《精尽 Spring MVC 源码分析 —— 组件一览》 《精尽 Spring MVC 源码分析 —— 请求处理一览》  考虑到 Spring MVC 和 Rest 关系比较大，所以本文一共分成两大块：  Spring MVC REST  Spring MVCSpring MVC 框架有什么用？Spring Web MVC 框架提供”">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://blog-pictures.oss-cn-shanghai.aliyuncs.com/15300766829012.jpg">
+<meta property="og:image" content="http://static2.iocoder.cn/images/Spring/2022-02-21/01.png">
+<meta property="og:image" content="http://static2.iocoder.cn/images/Spring/2022-02-21/02.png">
+<meta property="og:image" content="http://static2.iocoder.cn/images/Spring/2022-02-21/03.png">
+<meta property="article:published_time" content="2020-08-05T16:00:00.000Z">
+<meta property="article:modified_time" content="2020-08-06T06:27:33.627Z">
+<meta property="article:author" content="Seif Zheng">
+<meta property="article:tag" content="Spring">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://blog-pictures.oss-cn-shanghai.aliyuncs.com/15300766829012.jpg">
+
+<link rel="canonical" href="http://fatefrank.github.io/2020/08/06/Spring%20MVC%20%E9%9D%A2%E8%AF%95%E9%A2%98/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Spring MVC 面试题 | Seif Zheng's blog</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Seif Zheng's blog</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">日积月累，水滴石穿</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+  <a href="https://github.com/fatefrank" class="github-corner" title="Follow me on GitHub" aria-label="Follow me on GitHub" rel="noopener" target="_blank"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://fatefrank.github.io/2020/08/06/Spring%20MVC%20%E9%9D%A2%E8%AF%95%E9%A2%98/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Seif Zheng">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Seif Zheng's blog">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Spring MVC 面试题
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2020-08-06 00:00:00 / 修改时间：14:27:33" itemprop="dateCreated datePublished" datetime="2020-08-06T00:00:00+08:00">2020-08-06</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>推荐去撸一撸 Spring MVC 的源码，特别是如下两篇：</p>
+<ul>
+<li><a target="_blank" rel="noopener" href="http://svip.iocoder.cn/Spring-MVC/Components-intro/">《精尽 Spring MVC 源码分析 —— 组件一览》</a></li>
+<li><a target="_blank" rel="noopener" href="http://svip.iocoder.cn/Spring-MVC/DispatcherServlet-process-request-intro/">《精尽 Spring MVC 源码分析 —— 请求处理一览》</a></li>
+</ul>
+<p>考虑到 Spring MVC 和 Rest 关系比较大，所以本文一共分成两大块：</p>
+<ul>
+<li>Spring MVC</li>
+<li>REST</li>
+</ul>
+<h2 id="Spring-MVC"><a href="#Spring-MVC" class="headerlink" title="Spring MVC"></a>Spring MVC</h2><h3 id="Spring-MVC-框架有什么用？"><a href="#Spring-MVC-框架有什么用？" class="headerlink" title="Spring MVC 框架有什么用？"></a>Spring MVC 框架有什么用？</h3><p>Spring Web MVC 框架提供”模型-视图-控制器”( Model-View-Controller )架构和随时可用的组件，用于开发灵活且松散耦合的 Web 应用程序。</p>
+<p>MVC 模式有助于分离应用程序的不同方面，如输入逻辑，业务逻辑和 UI 逻辑，同时在所有这些元素之间提供松散耦合。</p>
+<h3 id="介绍下-Spring-MVC-的核心组件？"><a href="#介绍下-Spring-MVC-的核心组件？" class="headerlink" title="介绍下 Spring MVC 的核心组件？"></a>介绍下 Spring MVC 的核心组件？</h3><p>Spring MVC 一共有九大核心组件，分别是：</p>
+<ul>
+<li>MultipartResolver</li>
+<li>LocaleResolver</li>
+<li>ThemeResolver</li>
+<li>HandlerMapping</li>
+<li>HandlerAdapter</li>
+<li>HandlerExceptionResolver</li>
+<li>RequestToViewNameTranslator</li>
+<li>ViewResolver</li>
+<li>FlashMapManager</li>
+</ul>
+<p>虽然很多，但是在前后端分离的架构中，在 <a target="_blank" rel="noopener" href="http://svip.iocoder.cn/Spring-MVC/Interview/#">「描述一下 DispatcherServlet 的工作流程？」</a> 问题中，我们会明白，最关键的只有 HandlerMapping + HandlerAdapter + HandlerExceptionResolver 。</p>
+<p>关于每个组件的说明，直接看 <a target="_blank" rel="noopener" href="http://svip.iocoder.cn/Spring-MVC/Components-intro/">《精尽 Spring MVC 源码分析 —— 组件一览》</a> 。</p>
+<h3 id="描述一下-DispatcherServlet-的工作流程？"><a href="#描述一下-DispatcherServlet-的工作流程？" class="headerlink" title="描述一下 DispatcherServlet 的工作流程？"></a>描述一下 DispatcherServlet 的工作流程？</h3><p><img src="https://blog-pictures.oss-cn-shanghai.aliyuncs.com/15300766829012.jpg" alt="DispatcherServlet 的工作流程"></p>
+<p>① <strong>发送请求</strong></p>
+<p>用户向服务器发送 HTTP 请求，请求被 Spring MVC 的调度控制器 DispatcherServlet 捕获。</p>
+<p>② <strong>映射处理器</strong></p>
+<p>DispatcherServlet 根据请求 URL ，调用 HandlerMapping 获得该 Handler 配置的所有相关的对象（包括 <strong>Handler</strong> 对象以及 Handler 对象对应的<strong>拦截器</strong>），最后以 HandlerExecutionChain 对象的形式返回。</p>
+<ul>
+<li>即 HandlerExecutionChain 中，包含对应的 <strong>Handler</strong> 对象和<strong>拦截器</strong>们。</li>
+</ul>
+<blockquote>
+<p>此处，对应的方法如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">&gt; &#x2F;&#x2F; HandlerMapping.java</span><br><span class="line">&gt; </span><br><span class="line">&gt; @Nullable</span><br><span class="line">&gt; HandlerExecutionChain getHandler(HttpServletRequest request) throws Exception;</span><br><span class="line">&gt;</span><br></pre></td></tr></table></figure>
+</blockquote>
+<p>③④ <strong>处理器适配 + 调用处理器方法</strong></p>
+<p>DispatcherServlet 根据获得的 Handler，选择一个合适的HandlerAdapter 。（附注：如果成功获得 HandlerAdapter 后，此时将开始执行拦截器的 <code>#preHandler(...)</code> 方法）。</p>
+<p>提取请求 Request 中的模型数据，填充 Handler 入参，开始执行Handler（Controller)。 在填充Handler的入参过程中，根据你的配置，Spring 将帮你做一些额外的工作：</p>
+<ul>
+<li>HttpMessageConverter ：会将请求消息（如 JSON、XML 等数据）转换成一个对象。</li>
+<li>数据转换：对请求消息进行数据转换。如 String 转换成 Integer、Double 等。</li>
+<li>数据格式化：对请求消息进行数据格式化。如将字符串转换成格式化数字或格式化日期等。</li>
+<li>数据验证： 验证数据的有效性（长度、格式等），验证结果存储到 BindingResult 或 Error 中。</li>
+</ul>
+<p>Handler(Controller) 执行完成后，向 DispatcherServlet 返回一个 ModelAndView 对象。</p>
+<blockquote>
+<p>此处，对应的方法如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">&gt; &#x2F;&#x2F; HandlerAdapter.java</span><br><span class="line">&gt; </span><br><span class="line">&gt; @Nullable</span><br><span class="line">&gt; ModelAndView handle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception;</span><br><span class="line">&gt;</span><br></pre></td></tr></table></figure>
+</blockquote>
+<p>⑤ <strong>解析视图</strong></p>
+<p>根据返回的 ModelAndView ，选择一个适合的 ViewResolver（必须是已经注册到 Spring 容器中的 ViewResolver)，解析出 View 对象，然后返回给 DispatcherServlet。</p>
+<blockquote>
+<p>此处，对应的方法如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">&gt; &#x2F;&#x2F; ViewResolver.java</span><br><span class="line">&gt; </span><br><span class="line">&gt; @Nullable</span><br><span class="line">&gt; View resolveViewName(String viewName, Locale locale) throws Exception;</span><br><span class="line">&gt;</span><br></pre></td></tr></table></figure>
+</blockquote>
+<p>⑥ ⑦ <strong>渲染视图</strong> + <strong>响应请求</strong></p>
+<p>ViewResolver 结合 Model 和 View，来渲染视图，并写回给用户( 浏览器 )。</p>
+<blockquote>
+<p>此处，对应的方法如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">&gt; &#x2F;&#x2F; View.java</span><br><span class="line">&gt; </span><br><span class="line">&gt; void render(@Nullable Map&lt;String, ?&gt; model, HttpServletRequest request, HttpServletResponse response) throws Exception;</span><br><span class="line">&gt;</span><br></pre></td></tr></table></figure>
+</blockquote>
+<hr>
+<p>这样一看，胖友可能有点懵逼，所以还是推荐看看：</p>
+<ul>
+<li><a target="_blank" rel="noopener" href="http://svip.iocoder.cn/Spring-MVC/Components-intro/">《精尽 Spring MVC 源码分析 —— 组件一览》</a></li>
+<li><a target="_blank" rel="noopener" href="http://svip.iocoder.cn/Spring-MVC/DispatcherServlet-process-request-intro/">《精尽 Spring MVC 源码分析 —— 请求处理一览》</a></li>
+</ul>
+<p><strong>但是 Spring MVC 的流程真的一定是酱紫么</strong>？</p>
+<p>既然这么问，答案当然不是。对于目前主流的架构，前后端已经进行分离了，所以 Spring MVC 只负责 <strong>M</strong>odel 和 <strong>C</strong>ontroller 两块，而将 <strong>V</strong>iew 移交给了前端。所以，在上图中的步骤 ⑤ 和 ⑥ 两步，已经不在需要。</p>
+<p>那么变成什么样了呢？在步骤 ③ 中，如果 Handler(Controller) 执行完后，如果判断方法有 <code>@ResponseBody</code> 注解，则直接将结果写回给用户( 浏览器 )。</p>
+<p>但是 HTTP 是不支持返回 Java POJO 对象的，所以需要将结果使用 <a target="_blank" rel="noopener" href="http://svip.iocoder.cn/Spring-MVC/HandlerAdapter-5-HttpMessageConverter/">HttpMessageConverter</a> 进行转换后，才能返回。例如说，大家所熟悉的 <a target="_blank" rel="noopener" href="https://github.com/alibaba/fastjson/wiki/%E5%9C%A8-Spring-%E4%B8%AD%E9%9B%86%E6%88%90-Fastjson">FastJsonHttpMessageConverter</a> ，将 POJO 转换成 JSON 字符串返回。</p>
+<p>再来补充两个图，这真的是 Spring MVC 非常关键的问题，所以要用心理解。</p>
+<p>FROM <a target="_blank" rel="noopener" href="https://blog.csdn.net/J080624/article/details/77990164">《SpringMVC - 运行流程图及原理分析》</a></p>
+<p><strong>流程示意图</strong>：</p>
+<p><img src="http://static2.iocoder.cn/images/Spring/2022-02-21/01.png" alt="流程示意图"></p>
+<p><strong>代码序列图</strong>：</p>
+<p><img src="http://static2.iocoder.cn/images/Spring/2022-02-21/02.png" alt="代码序列图"></p>
+<p>FROM <a target="_blank" rel="noopener" href="https://item.jd.com/11807414.html">《看透 Spring MVC：源代码分析与实践》</a> P123</p>
+<p><strong>流程示意图</strong>：</p>
+<p><img src="http://static2.iocoder.cn/images/Spring/2022-02-21/03.png" alt="《流程示意图》"></p>
+<h3 id="Controller-注解有什么用？"><a href="#Controller-注解有什么用？" class="headerlink" title="@Controller 注解有什么用？"></a>@Controller 注解有什么用？</h3><p><code>@Controller</code> 注解，它将一个类标记为 Spring Web MVC <strong>控制器</strong> Controller 。</p>
+<h3 id="RestController-和-Controller-有什么区别？"><a href="#RestController-和-Controller-有什么区别？" class="headerlink" title="@RestController 和 @Controller 有什么区别？"></a>@RestController 和 @Controller 有什么区别？</h3><p><code>@RestController</code> 注解，在 <code>@Controller</code> 基础上，增加了 <code>@ResponseBody</code> 注解，更加适合目前前后端分离的架构下，提供 Restful API ，返回例如 JSON 数据格式。当然，返回什么样的数据格式，根据客户端的 <code>&quot;ACCEPT&quot;</code> 请求头来决定。</p>
+<h3 id="RequestMapping-注解有什么用？"><a href="#RequestMapping-注解有什么用？" class="headerlink" title="@RequestMapping 注解有什么用？"></a>@RequestMapping 注解有什么用？</h3><p><code>@RequestMapping</code> 注解，用于将特定 HTTP 请求方法映射到将处理相应请求的控制器中的特定类/方法。此注释可应用于两个级别：</p>
+<ul>
+<li>类级别：映射请求的 URL。</li>
+<li>方法级别：映射 URL 以及 HTTP 请求方法。</li>
+</ul>
+<h3 id="RequestMapping-和-GetMapping-注解的不同之处在哪里？"><a href="#RequestMapping-和-GetMapping-注解的不同之处在哪里？" class="headerlink" title="@RequestMapping 和 @GetMapping 注解的不同之处在哪里？"></a>@RequestMapping 和 @GetMapping 注解的不同之处在哪里？</h3><ul>
+<li><code>@RequestMapping</code> 可注解在类和方法上；<code>@GetMapping</code> 仅可注册在方法上。</li>
+<li><code>@RequestMapping</code> 可进行 GET、POST、PUT、DELETE 等请求方法；<code>@GetMapping</code> 是 <code>@RequestMapping</code> 的 GET 请求方法的特例，目的是为了提高清晰度。</li>
+</ul>
+<h3 id="返回-JSON-格式使用什么注解？"><a href="#返回-JSON-格式使用什么注解？" class="headerlink" title="返回 JSON 格式使用什么注解？"></a>返回 JSON 格式使用什么注解？</h3><p>可以使用 <strong><code>@ResponseBody</code></strong> 注解，或者使用包含 <code>@ResponseBody</code> 注解的 <strong><code>@RestController</code></strong> 注解。</p>
+<p>当然，还是需要配合相应的支持 JSON 格式化的 HttpMessageConverter 实现类。例如，Spring MVC 默认使用 MappingJackson2HttpMessageConverter 。</p>
+<h3 id="介绍一下-WebApplicationContext-？"><a href="#介绍一下-WebApplicationContext-？" class="headerlink" title="介绍一下 WebApplicationContext ？"></a>介绍一下 WebApplicationContext ？</h3><p>WebApplicationContext 是实现ApplicationContext接口的子类，专门为 WEB 应用准备的。</p>
+<ul>
+<li>它允许从相对于 Web 根目录的路径中<strong>加载配置文件</strong>，<strong>完成初始化 Spring MVC 组件的工作</strong>。</li>
+<li>从 WebApplicationContext 中，可以获取 ServletContext 引用，整个 Web 应用上下文对象将作为属性放置在 ServletContext 中，以便 Web 应用环境可以访问 Spring 上下文。</li>
+</ul>
+<p>关于这一块，如果想要详细了解，可以看看如下两篇文章：</p>
+<ul>
+<li><a target="_blank" rel="noopener" href="http://svip.iocoder.cn/Spring-MVC/context-init-Root-WebApplicationContext/">《精尽 Spring MVC 源码分析 —— 容器的初始化（一）之 Root WebApplicationContext 容器》</a></li>
+<li><a target="_blank" rel="noopener" href="http://svip.iocoder.cn/Spring-MVC/context-init-Servlet-WebApplicationContext/">《精尽 Spring MVC 源码分析 —— 容器的初始化（二）之 Servlet WebApplicationContext 容器》</a></li>
+</ul>
+<h3 id="Spring-MVC-的异常处理？"><a href="#Spring-MVC-的异常处理？" class="headerlink" title="Spring MVC 的异常处理？"></a>Spring MVC 的异常处理？</h3><p>Spring MVC 提供了异常解析器 HandlerExceptionResolver 接口，将处理器( <code>handler</code> )执行时发生的异常，解析( 转换 )成对应的 ModelAndView 结果。代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// HandlerExceptionResolver.java</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">HandlerExceptionResolver</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 解析异常，转换成对应的 ModelAndView 结果</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="meta">@Nullable</span></span><br><span class="line">    <span class="function">ModelAndView <span class="title">resolveException</span><span class="params">(HttpServletRequest request, </span></span></span><br><span class="line"><span class="function"><span class="params">                                  HttpServletResponse response, </span></span></span><br><span class="line"><span class="function"><span class="params">                                  <span class="meta">@Nullable</span> Object handler, Exception ex)</span></span>;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>也就是说，如果异常被解析成功，则会返回 ModelAndView 对象。</li>
+<li>详细的源码解析，见 <a target="_blank" rel="noopener" href="http://svip.iocoder.cn/Spring-MVC/HandlerExceptionResolver/">《精尽 Spring MVC 源码解析 —— HandlerExceptionResolver 组件》</a> 。</li>
+</ul>
+<p>一般情况下，我们使用 <code>@ExceptionHandler</code> 注解来实现过异常的处理，可以先看看 <a target="_blank" rel="noopener" href="https://www.jianshu.com/p/12e1a752974d">《Spring 异常处理 ExceptionHandler 的使用》</a> 。</p>
+<ul>
+<li>一般情况下，艿艿喜欢使用<strong>第三种</strong>。</li>
+</ul>
+<h3 id="Spring-MVC-有什么优点？"><a href="#Spring-MVC-有什么优点？" class="headerlink" title="Spring MVC 有什么优点？"></a>Spring MVC 有什么优点？</h3><ol>
+<li>使用真的真的真的非常<strong>方便</strong>，无论是添加 HTTP 请求方法映射的方法，还是不同数据格式的响应。</li>
+<li>提供<strong>拦截器机制</strong>，可以方便的对请求进行拦截处理。</li>
+<li>提供<strong>异常机制</strong>，可以方便的对异常做统一处理。</li>
+<li>可以任意使用各种<strong>视图</strong>技术，而不仅仅局限于 JSP ，例如 Freemarker、Thymeleaf 等等。</li>
+<li>不依赖于 Servlet API (目标虽是如此，但是在实现的时候确实是依赖于 Servlet 的，当然仅仅依赖 Servlet ，而不依赖 Filter、Listener )。</li>
+</ol>
+<h3 id="Spring-MVC-怎样设定重定向和转发-？"><a href="#Spring-MVC-怎样设定重定向和转发-？" class="headerlink" title="Spring MVC 怎样设定重定向和转发 ？"></a>Spring MVC 怎样设定重定向和转发 ？</h3><ul>
+<li>结果转发：在返回值的前面加 <code>&quot;forward:/&quot;</code> 。</li>
+<li>重定向：在返回值的前面加上 <code>&quot;redirect:/&quot;</code> 。</li>
+</ul>
+<p>当然，目前前后端分离之后，我们作为后端开发，已经很少有机会用上这个功能了。</p>
+<h3 id="Spring-MVC-的-Controller-是不是单例？"><a href="#Spring-MVC-的-Controller-是不是单例？" class="headerlink" title="Spring MVC 的 Controller 是不是单例？"></a>Spring MVC 的 Controller 是不是单例？</h3><p>绝绝绝大多数情况下，Controller 是<strong>单例</strong>。</p>
+<p>那么，Controller 里一般不建议存在<strong>共享的变量</strong>。实际场景下，艿艿也没碰到需要使用共享变量的情况。</p>
+<h3 id="Spring-MVC-和-Struts2-的异同？"><a href="#Spring-MVC-和-Struts2-的异同？" class="headerlink" title="Spring MVC 和 Struts2 的异同？"></a>Spring MVC 和 Struts2 的异同？</h3><ol>
+<li><p>入口</p>
+<p>不同</p>
+<ul>
+<li>Spring MVC 的入门是一个 Servlet <strong>控制器</strong>。</li>
+<li>Struts2 入门是一个 Filter <strong>过滤器</strong>。</li>
+</ul>
+</li>
+<li><p>配置映射</p>
+<p>不同，</p>
+<ul>
+<li>Spring MVC 是基于<strong>方法</strong>开发，传递参数是通过<strong>方法形参</strong>，一般设置为<strong>单例</strong>。</li>
+<li>Struts2 是基于<strong>类</strong>开发，传递参数是通过<strong>类的属性</strong>，只能设计为<strong>多例</strong>。</li>
+</ul>
+</li>
+</ol>
+<ul>
+<li><p>视图</p>
+<p>不同</p>
+<ul>
+<li>Spring MVC 通过参数解析器是将 Request 对象内容进行解析成方法形参，将响应数据和页面封装成 <strong>ModelAndView</strong> 对象，最后又将模型数据通过 <strong>Request</strong> 对象传输到页面。其中，如果视图使用 JSP 时，默认使用 <strong>JSTL</strong> 。</li>
+<li>Struts2 采用<strong>值栈</strong>存储请求和响应的数据，通过 <strong>OGNL</strong> 存取数据。</li>
+</ul>
+</li>
+</ul>
+<p>当然，更详细的也可以看看 <a target="_blank" rel="noopener" href="http://www.voidcn.com/article/p-ylualwcj-c.html">《面试题：Spring MVC 和 Struts2 的区别》</a> 一文。</p>
+<h3 id="详细介绍下-Spring-MVC-拦截器？"><a href="#详细介绍下-Spring-MVC-拦截器？" class="headerlink" title="详细介绍下 Spring MVC 拦截器？"></a>详细介绍下 Spring MVC 拦截器？</h3><p><code>org.springframework.web.servlet.HandlerInterceptor</code> ，拦截器接口。代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// HandlerInterceptor.java</span></span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 拦截处理器，在 &#123;<span class="doctag">@link</span> HandlerAdapter#handle(HttpServletRequest, HttpServletResponse, Object)&#125; 执行之前</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">default</span> <span class="keyword">boolean</span> <span class="title">preHandle</span><span class="params">(HttpServletRequest request, </span></span></span><br><span class="line"><span class="function"><span class="params">                          HttpServletResponse response, </span></span></span><br><span class="line"><span class="function"><span class="params">                          Object handler)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 拦截处理器，在 &#123;<span class="doctag">@link</span> HandlerAdapter#handle(HttpServletRequest, HttpServletResponse, Object)&#125; 执行成功之后</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">default</span> <span class="keyword">void</span> <span class="title">postHandle</span><span class="params">(HttpServletRequest request, </span></span></span><br><span class="line"><span class="function"><span class="params">                        HttpServletResponse response, </span></span></span><br><span class="line"><span class="function"><span class="params">                        Object handler,</span></span></span><br><span class="line"><span class="function"><span class="params">                        <span class="meta">@Nullable</span> ModelAndView modelAndView)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 拦截处理器，在 &#123;<span class="doctag">@link</span> HandlerAdapter#handle(HttpServletRequest, HttpServletResponse, Object)&#125; 执行完之后，无论成功还是失败</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * 并且，只有该处理器 &#123;<span class="doctag">@link</span> #preHandle(HttpServletRequest, HttpServletResponse, Object)&#125; 执行成功之后，才会被执行</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">default</span> <span class="keyword">void</span> <span class="title">afterCompletion</span><span class="params">(HttpServletRequest request, </span></span></span><br><span class="line"><span class="function"><span class="params">                             HttpServletResponse response, </span></span></span><br><span class="line"><span class="function"><span class="params">                             Object handler,</span></span></span><br><span class="line"><span class="function"><span class="params">                             <span class="meta">@Nullable</span> Exception ex)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>一共有三个方法，分别为：<ul>
+<li><code>#preHandle(...)</code> 方法，调用 Controller 方法之<strong>前</strong>执行。</li>
+<li><code>#postHandle(...)</code> 方法，调用 Controller 方法之<strong>后</strong>执行。</li>
+<li><code>#afterCompletion(...)</code>方法，处理完 Controller 方法返回结果之后执行。<ul>
+<li>例如，页面渲染后。</li>
+<li><strong>当然，要注意，无论调用 Controller 方法是否成功，都会执行</strong>。</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>举个例子：<ul>
+<li>当俩个拦截器都实现放行操作时，执行顺序为 <code>preHandle[1] =&gt; preHandle[2] =&gt; postHandle[2] =&gt; postHandle[1] =&gt; afterCompletion[2] =&gt; afterCompletion[1]</code> 。</li>
+<li>当第一个拦截器 <code>#preHandle(...)</code> 方法返回 <code>false</code> ，也就是对其进行拦截时，第二个拦截器是完全不执行的，第一个拦截器只执行 <code>#preHandle(...)</code> 部分。</li>
+<li>当第一个拦截器 <code>#preHandle(...)</code> 方法返回 <code>true</code> ，第二个拦截器 <code>#preHandle(...)</code> 返回 <code>false</code> ，执行顺序为 <code>preHandle[1] =&gt; preHandle[2] =&gt; afterCompletion[1]</code> 。</li>
+</ul>
+</li>
+<li>总结来说：<ul>
+<li><code>#preHandle(...)</code> 方法，按拦截器定义<strong>顺序</strong>调用。若任一拦截器返回 <code>false</code> ，则 Controller 方法不再调用。</li>
+<li><code>#postHandle(...)</code> 和 <code>#afterCompletion(...)</code> 方法，按拦截器定义<strong>逆序</strong>调用。</li>
+<li><code>#postHandler(...)</code> 方法，在调用 Controller 方法之<strong>后</strong>执行。</li>
+<li><code>#afterCompletion(...)</code> 方法，只有该拦截器在 <code>#preHandle(...)</code> 方法返回 <code>true</code> 时，才能够被调用，且一定会被调用。为什么“且一定会被调用”呢？即使 <code>#afterCompletion(...)</code> 方法，按拦截器定义<strong>逆序</strong>调用时，前面的拦截器发生异常，后面的拦截器还能够调用，<strong>即无视异常</strong>。</li>
+</ul>
+</li>
+</ul>
+<hr>
+<p>关于这块，可以看看如下两篇文章：</p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://blog.csdn.net/amaxiaochen/article/details/77210880">《Spring MVC 多个拦截器执行顺序及拦截器使用方法》</a> 文章，通过<strong>实践</strong>更加理解。</li>
+<li><a target="_blank" rel="noopener" href="http://svip.iocoder.cn/Spring-MVC/HandlerMapping-2-HandlerInterceptor/">《精尽 Spring MVC 源码分析 —— HandlerMapping 组件（二）之 HandlerInterceptor》</a> 文章，通过<strong>源码</strong>更加理解。</li>
+</ul>
+<h3 id="Spring-MVC-的拦截器可以做哪些事情？"><a href="#Spring-MVC-的拦截器可以做哪些事情？" class="headerlink" title="Spring MVC 的拦截器可以做哪些事情？"></a>Spring MVC 的拦截器可以做哪些事情？</h3><p>拦截器能做的事情非常非常非常多，例如：</p>
+<ul>
+<li>记录访问日志。</li>
+<li>记录异常日志。</li>
+<li>需要登陆的请求操作，拦截未登陆的用户。</li>
+<li>…</li>
+</ul>
+<h3 id="Spring-MVC-的拦截器和-Filter-过滤器有什么差别？"><a href="#Spring-MVC-的拦截器和-Filter-过滤器有什么差别？" class="headerlink" title="Spring MVC 的拦截器和 Filter 过滤器有什么差别？"></a>Spring MVC 的拦截器和 Filter 过滤器有什么差别？</h3><p>看了文章 <a target="_blank" rel="noopener" href="https://blog.csdn.net/xiaodanjava/article/details/32125687">《过滤器( Filter )和拦截器( Interceptor )的区别》</a> ，感觉对比的怪怪的。艿艿觉得主要几个点吧：</p>
+<ul>
+<li><strong>功能相同</strong>：拦截器和 Filter都能实现相应的功能，谁也不比谁强。</li>
+<li><strong>容器不同</strong>：拦截器构建在 Spring MVC 体系中；Filter 构建在 Servlet 容器之上。</li>
+<li><strong>使用便利性不同</strong>：拦截器提供了三个方法，分别在不同的时机执行；过滤器仅提供一个方法，当然也能实现拦截器的执行时机的效果，就是麻烦一些。</li>
+</ul>
+<p>另外，再补充一点小知识。我们会发现，拓展性好的框架，都会提供相应的拦截器或过滤器机制，方便的我们做一些拓展。例如：</p>
+<ul>
+<li>Dubbo 的 Filter 机制。</li>
+<li>Spring Cloud Gateway 的 Filter 机制。</li>
+<li>Struts2 的拦截器机制。</li>
+</ul>
+<h2 id="REST"><a href="#REST" class="headerlink" title="REST"></a>REST</h2><h3 id="REST-代表着什么"><a href="#REST-代表着什么" class="headerlink" title="REST 代表着什么?"></a>REST 代表着什么?</h3><p>REST 代表着抽象状态转移，它是根据 HTTP 协议从客户端发送数据到服务端，例如：服务端的一本书可以以 XML 或 JSON 格式传递到客户端。</p>
+<p>然而，假如你不熟悉REST，我建议你先看看 <a target="_blank" rel="noopener" href="http://bit.ly/2zIGzWK">REST API design and development</a> 这篇文章来更好的了解它。不过对于大多数胖友的英语，可能不太好，所以也可以阅读知乎上的 <a target="_blank" rel="noopener" href="https://www.zhihu.com/question/28557115">《怎样用通俗的语言解释 REST，以及 RESTful？》</a> 讨论。</p>
+<h3 id="资源是什么"><a href="#资源是什么" class="headerlink" title="资源是什么?"></a>资源是什么?</h3><p>资源是指数据在 REST 架构中如何显示的。将实体作为资源公开 ，它允许客户端通过 HTTP 方法如：<a target="_blank" rel="noopener" href="http://javarevisited.blogspot.sg/2012/03/get-post-method-in-http-and-https.html">GET</a>, <a target="_blank" rel="noopener" href="http://www.java67.com/2014/08/difference-between-post-and-get-request.html">POST</a>,<a target="_blank" rel="noopener" href="http://www.java67.com/2016/09/when-to-use-put-or-post-in-restful-web-services.html">PUT</a>, DELETE 等读，写，修改和创建资源。</p>
+<h3 id="什么是安全的-REST-操作"><a href="#什么是安全的-REST-操作" class="headerlink" title="什么是安全的 REST 操作?"></a>什么是安全的 REST 操作?</h3><p>REST 接口是通过 HTTP 方法完成操作。</p>
+<ul>
+<li>一些HTTP操作是安全的，如 GET 和 HEAD ，它不能在服务端修改资源</li>
+<li>换句话说，PUT,POST 和 DELETE 是不安全的，因为他们能修改服务端的资源。</li>
+</ul>
+<p>所以，是否安全的界限，在于<strong>是否修改</strong>服务端的资源。</p>
+<h3 id="什么是幂等操作-为什么幂等操作如此重要"><a href="#什么是幂等操作-为什么幂等操作如此重要" class="headerlink" title="什么是幂等操作? 为什么幂等操作如此重要?"></a>什么是幂等操作? 为什么幂等操作如此重要?</h3><p>有一些HTTP方法，如：GET，不管你使用多少次它都能产生相同的结果，在没有任何一边影响的情况下，发送多个 GET 请求到相同的<a target="_blank" rel="noopener" href="http://www.java67.com/2013/01/difference-between-url-uri-and-urn.html">URI</a> 将会产生相同的响应结果。因此，这就是所谓<strong>幂等</strong>操作。</p>
+<p>换句话说，<a target="_blank" rel="noopener" href="http://javarevisited.blogspot.sg/2016/05/what-are-idempotent-and-safe-methods-of-HTTP-and-REST.html">POST方法不是幂等操作</a> ，因为如果发送多个 POST 请求，它将在服务端创建不同的资源。但是，假如你用PUT更新资源，它将是幂等操作。</p>
+<p>甚至多个 PUT 请求被用来更新服务端资源，将得到相同的结果。你可以通过 Pluralsight 学习 <a target="_blank" rel="noopener" href="http://pluralsight.pxf.io/c/1193463/424552/7490?u=https://www.pluralsight.com/courses/xhttp-fund">HTTP Fundamentals</a> 课程来了解 HTTP 协议和一般的 HTTP 的更多幂等操作。</p>
+<h3 id="REST-是可扩展的或说是协同的吗"><a href="#REST-是可扩展的或说是协同的吗" class="headerlink" title="REST 是可扩展的或说是协同的吗?"></a>REST 是可扩展的或说是协同的吗?</h3><p>是的，<a target="_blank" rel="noopener" href="http://javarevisited.blogspot.sg/2015/08/difference-between-soap-and-restfull-webservice-java.html">REST</a> 是可扩展的和可协作的。它既不托管一种特定的技术选择，也不定在客户端或者服务端。你可以用 <a target="_blank" rel="noopener" href="http://javarevisited.blogspot.sg/2017/11/top-5-free-java-courses-for-beginners.html">Java</a>, <a target="_blank" rel="noopener" href="http://www.java67.com/2018/02/5-free-cpp-courses-to-learn-programming.html">C++</a>, <a target="_blank" rel="noopener" href="http://www.java67.com/2018/02/5-free-python-online-courses-for-beginners.html">Python</a>, 或 <a target="_blank" rel="noopener" href="http://www.java67.com/2018/04/top-5-free-javascript-courses-to-learn.html">JavaScript</a> 来创建 RESTful Web 服务，也可以在客户端使用它们。</p>
+<p>我建议你读一本关于REST接口的书来了解更多，如：<a target="_blank" rel="noopener" href="http://javarevisited.blogspot.sg/2017/02/top-5-books-to-learn-rest-and-restful-web-services-in-java.html">RESTful Web Services</a> 。</p>
+<blockquote>
+<p>艿艿：所以这里的“可拓展”、“协同”对应到我们平时常说的，“跨语言”、“语言无关”。</p>
+</blockquote>
+<h3 id="REST-用哪种-HTTP-方法呢"><a href="#REST-用哪种-HTTP-方法呢" class="headerlink" title="REST 用哪种 HTTP 方法呢?"></a>REST 用哪种 HTTP 方法呢?</h3><p>REST 能用任何的 HTTP 方法，但是，最受欢迎的是：</p>
+<ul>
+<li>用 GET 来检索服务端资源</li>
+<li>用 POST 来创建服务端资源</li>
+<li><a target="_blank" rel="noopener" href="http://javarevisited.blogspot.sg/2016/04/what-is-purpose-of-http-request-types-in-RESTful-web-service.html#axzz56WGunSwy">用 PUT 来更新服务端资源</a></li>
+<li>用 DELETE 来删除服务端资源。</li>
+</ul>
+<p>恰好，这四个操作，对上我们日常逻辑的 CRUD 操作。</p>
+<blockquote>
+<p>艿艿：经常能听到胖友抱怨自己做的都是 CRUD 的功能。看了这个面试题，有没觉得原来 CRUD 也能玩的稍微高级一点？！</p>
+<p>实际上，每个 CRUD 也是可以通过不断的打磨，玩的很高级。例如说 DDD 领域驱动，完整的单元测试，可扩展的设计。</p>
+</blockquote>
+<h3 id="删除的-HTTP-状态返回码是什么"><a href="#删除的-HTTP-状态返回码是什么" class="headerlink" title="删除的 HTTP 状态返回码是什么 ?"></a>删除的 HTTP 状态返回码是什么 ?</h3><p>在删除成功之后，您的 REST API 应该返回什么状态代码，并没有严格的规则。它可以返回 200 或 204 没有内容。</p>
+<ul>
+<li>一般来说，如果删除操作成功，响应主体为空，返回 <a target="_blank" rel="noopener" href="http://www.netingcn.com/http-status-204.html">204</a> 。</li>
+<li>如果删除请求成功且响应体不是空的，则返回 200 。</li>
+</ul>
+<h3 id="REST-API-是无状态的吗"><a href="#REST-API-是无状态的吗" class="headerlink" title="REST API 是无状态的吗?"></a>REST API 是无状态的吗?</h3><p><strong>是的</strong>，REST API 应该是无状态的，因为它是基于 HTTP 的，它也是无状态的。</p>
+<p>REST API 中的请求应该包含处理它所需的所有细节。它<strong>不应该</strong>依赖于以前或下一个请求或服务器端维护的一些数据，例如会话。</p>
+<p><strong>REST 规范为使其无状态设置了一个约束，在设计 REST API 时，您应该记住这一点</strong>。</p>
+<h3 id="REST安全吗-你能做什么来保护它"><a href="#REST安全吗-你能做什么来保护它" class="headerlink" title="REST安全吗? 你能做什么来保护它?"></a>REST安全吗? 你能做什么来保护它?</h3><p>安全是一个宽泛的术语。它可能意味着消息的安全性，这是通过认证和授权提供的加密或访问限制提供的。</p>
+<p>REST 通常不是安全的，但是您可以通过使用 Spring Security 来保护它。</p>
+<ul>
+<li>至少，你可以通过在 Spring Security 配置文件中使用 HTTP 来启用 HTTP Basic Auth 基本认证。</li>
+<li>类似地，如果底层服务器支持 HTTPS ，你可以使用 HTTPS 公开 REST API 。</li>
+</ul>
+<h3 id="RestTemplate-的优势是什么"><a href="#RestTemplate-的优势是什么" class="headerlink" title="RestTemplate 的优势是什么?"></a>RestTemplate 的优势是什么?</h3><p>在 Spring Framework 中，RestTemplate 类是 <a target="_blank" rel="noopener" href="http://www.java67.com/2012/09/top-10-java-design-pattern-interview-question-answer.html">模板方法模式</a> 的实现。跟其他主流的模板类相似，如 JdbcTemplate 或 JmsTempalte ，它将在客户端简化跟 RESTful Web 服务的集成。正如在 RestTemplate 例子中显示的一样，你能非常容易地用它来调用 RESTful Web 服务。</p>
+<blockquote>
+<p>艿艿：当然，实际场景我还是更喜欢使用 <a target="_blank" rel="noopener" href="http://square.github.io/okhttp/">OkHttp</a> 作为 HTTP 库，因为更好的性能，使用也便捷，并且无需依赖 Spring 库。</p>
+</blockquote>
+<h3 id="HttpMessageConverter-在-Spring-REST-中代表什么"><a href="#HttpMessageConverter-在-Spring-REST-中代表什么" class="headerlink" title="HttpMessageConverter 在 Spring REST 中代表什么?"></a>HttpMessageConverter 在 Spring REST 中代表什么?</h3><p>HttpMessageConverter 是一种<a target="_blank" rel="noopener" href="http://www.java67.com/2014/12/strategy-pattern-in-java-with-example.html">策略接口</a> ，它指定了一个转换器，它可以转换 HTTP 请求和响应。Spring REST 用这个接口转换 HTTP 响应到多种格式，例如：JSON 或 XML 。</p>
+<p>每个 HttpMessageConverter 实现都有一种或几种相关联的MIME协议。Spring 使用 <code>&quot;Accept&quot;</code> 的标头来确定客户端所期待的内容类型。</p>
+<p>然后，它将尝试找到一个注册的 HTTPMessageConverter ，它能够处理特定的内容类型，并使用它将响应转换成这种格式，然后再将其发送给客户端。</p>
+<p>如果胖友对 HttpMessageConverter 不了解，可以看看 <a target="_blank" rel="noopener" href="https://leokongwq.github.io/2017/06/14/spring-MessageConverter.html">《Spring 中 HttpMessageConverter 详解》</a> 。</p>
+<h3 id="如何创建-HttpMessageConverter-的自定义实现来支持一种新的请求-响应？"><a href="#如何创建-HttpMessageConverter-的自定义实现来支持一种新的请求-响应？" class="headerlink" title="如何创建 HttpMessageConverter 的自定义实现来支持一种新的请求/响应？"></a>如何创建 HttpMessageConverter 的自定义实现来支持一种新的请求/响应？</h3><p>我们仅需要创建自定义的 AbstractHttpMessageConverter 的实现，并使用 WebMvcConfigurerAdapter 的 <code>#extendMessageConverters(List&gt; converters)</code> 方法注中册它，该方法可以生成一种新的请求 / 响应类型。</p>
+<p>具体的示例，可以学习 <a target="_blank" rel="noopener" href="https://github.com/alibaba/fastjson/wiki/%E5%9C%A8-Spring-%E4%B8%AD%E9%9B%86%E6%88%90-Fastjson">《在 Spring 中集成 Fastjson》</a> 文章。</p>
+<h3 id="PathVariable-注解，在-Spring-MVC-做了什么-为什么-REST-在-Spring-中如此有用？"><a href="#PathVariable-注解，在-Spring-MVC-做了什么-为什么-REST-在-Spring-中如此有用？" class="headerlink" title="@PathVariable 注解，在 Spring MVC 做了什么? 为什么 REST 在 Spring 中如此有用？"></a>@PathVariable 注解，在 Spring MVC 做了什么? 为什么 REST 在 Spring 中如此有用？</h3><p><code>@PathVariable</code> 注解，是 Spring MVC 中有用的注解之一，它允许您从 URI 读取值，比如查询参数。它在使用 Spring 创建 RESTful Web 服务时特别有用，因为在 REST 中，资源标识符是 URI 的一部分。</p>
+<p>具体的使用示例，胖友如果不熟悉，可以看看 <a target="_blank" rel="noopener" href="https://blog.csdn.net/cx361006796/article/details/52829759">《Spring MVC 的 @RequestParam 注解和 @PathVariable 注解的区别》</a> 。</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Spring/" rel="tag"># Spring</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2020/08/06/%E7%BC%93%E5%AD%98%20%E9%9D%A2%E8%AF%95%E9%A2%98/" rel="prev" title="缓存 面试题">
+      <i class="fa fa-chevron-left"></i> 缓存 面试题
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2020/08/06/MyBatis%20%E9%9D%A2%E8%AF%95%E9%A2%98/" rel="next" title="Mybatis 面试题">
+      Mybatis 面试题 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Spring-MVC"><span class="nav-number">1.</span> <span class="nav-text">Spring MVC</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Spring-MVC-%E6%A1%86%E6%9E%B6%E6%9C%89%E4%BB%80%E4%B9%88%E7%94%A8%EF%BC%9F"><span class="nav-number">1.1.</span> <span class="nav-text">Spring MVC 框架有什么用？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BB%8B%E7%BB%8D%E4%B8%8B-Spring-MVC-%E7%9A%84%E6%A0%B8%E5%BF%83%E7%BB%84%E4%BB%B6%EF%BC%9F"><span class="nav-number">1.2.</span> <span class="nav-text">介绍下 Spring MVC 的核心组件？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%8F%8F%E8%BF%B0%E4%B8%80%E4%B8%8B-DispatcherServlet-%E7%9A%84%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%EF%BC%9F"><span class="nav-number">1.3.</span> <span class="nav-text">描述一下 DispatcherServlet 的工作流程？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Controller-%E6%B3%A8%E8%A7%A3%E6%9C%89%E4%BB%80%E4%B9%88%E7%94%A8%EF%BC%9F"><span class="nav-number">1.4.</span> <span class="nav-text">@Controller 注解有什么用？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#RestController-%E5%92%8C-Controller-%E6%9C%89%E4%BB%80%E4%B9%88%E5%8C%BA%E5%88%AB%EF%BC%9F"><span class="nav-number">1.5.</span> <span class="nav-text">@RestController 和 @Controller 有什么区别？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#RequestMapping-%E6%B3%A8%E8%A7%A3%E6%9C%89%E4%BB%80%E4%B9%88%E7%94%A8%EF%BC%9F"><span class="nav-number">1.6.</span> <span class="nav-text">@RequestMapping 注解有什么用？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#RequestMapping-%E5%92%8C-GetMapping-%E6%B3%A8%E8%A7%A3%E7%9A%84%E4%B8%8D%E5%90%8C%E4%B9%8B%E5%A4%84%E5%9C%A8%E5%93%AA%E9%87%8C%EF%BC%9F"><span class="nav-number">1.7.</span> <span class="nav-text">@RequestMapping 和 @GetMapping 注解的不同之处在哪里？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BF%94%E5%9B%9E-JSON-%E6%A0%BC%E5%BC%8F%E4%BD%BF%E7%94%A8%E4%BB%80%E4%B9%88%E6%B3%A8%E8%A7%A3%EF%BC%9F"><span class="nav-number">1.8.</span> <span class="nav-text">返回 JSON 格式使用什么注解？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BB%8B%E7%BB%8D%E4%B8%80%E4%B8%8B-WebApplicationContext-%EF%BC%9F"><span class="nav-number">1.9.</span> <span class="nav-text">介绍一下 WebApplicationContext ？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Spring-MVC-%E7%9A%84%E5%BC%82%E5%B8%B8%E5%A4%84%E7%90%86%EF%BC%9F"><span class="nav-number">1.10.</span> <span class="nav-text">Spring MVC 的异常处理？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Spring-MVC-%E6%9C%89%E4%BB%80%E4%B9%88%E4%BC%98%E7%82%B9%EF%BC%9F"><span class="nav-number">1.11.</span> <span class="nav-text">Spring MVC 有什么优点？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Spring-MVC-%E6%80%8E%E6%A0%B7%E8%AE%BE%E5%AE%9A%E9%87%8D%E5%AE%9A%E5%90%91%E5%92%8C%E8%BD%AC%E5%8F%91-%EF%BC%9F"><span class="nav-number">1.12.</span> <span class="nav-text">Spring MVC 怎样设定重定向和转发 ？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Spring-MVC-%E7%9A%84-Controller-%E6%98%AF%E4%B8%8D%E6%98%AF%E5%8D%95%E4%BE%8B%EF%BC%9F"><span class="nav-number">1.13.</span> <span class="nav-text">Spring MVC 的 Controller 是不是单例？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Spring-MVC-%E5%92%8C-Struts2-%E7%9A%84%E5%BC%82%E5%90%8C%EF%BC%9F"><span class="nav-number">1.14.</span> <span class="nav-text">Spring MVC 和 Struts2 的异同？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%AF%A6%E7%BB%86%E4%BB%8B%E7%BB%8D%E4%B8%8B-Spring-MVC-%E6%8B%A6%E6%88%AA%E5%99%A8%EF%BC%9F"><span class="nav-number">1.15.</span> <span class="nav-text">详细介绍下 Spring MVC 拦截器？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Spring-MVC-%E7%9A%84%E6%8B%A6%E6%88%AA%E5%99%A8%E5%8F%AF%E4%BB%A5%E5%81%9A%E5%93%AA%E4%BA%9B%E4%BA%8B%E6%83%85%EF%BC%9F"><span class="nav-number">1.16.</span> <span class="nav-text">Spring MVC 的拦截器可以做哪些事情？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Spring-MVC-%E7%9A%84%E6%8B%A6%E6%88%AA%E5%99%A8%E5%92%8C-Filter-%E8%BF%87%E6%BB%A4%E5%99%A8%E6%9C%89%E4%BB%80%E4%B9%88%E5%B7%AE%E5%88%AB%EF%BC%9F"><span class="nav-number">1.17.</span> <span class="nav-text">Spring MVC 的拦截器和 Filter 过滤器有什么差别？</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#REST"><span class="nav-number">2.</span> <span class="nav-text">REST</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#REST-%E4%BB%A3%E8%A1%A8%E7%9D%80%E4%BB%80%E4%B9%88"><span class="nav-number">2.1.</span> <span class="nav-text">REST 代表着什么?</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%B5%84%E6%BA%90%E6%98%AF%E4%BB%80%E4%B9%88"><span class="nav-number">2.2.</span> <span class="nav-text">资源是什么?</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BB%80%E4%B9%88%E6%98%AF%E5%AE%89%E5%85%A8%E7%9A%84-REST-%E6%93%8D%E4%BD%9C"><span class="nav-number">2.3.</span> <span class="nav-text">什么是安全的 REST 操作?</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BB%80%E4%B9%88%E6%98%AF%E5%B9%82%E7%AD%89%E6%93%8D%E4%BD%9C-%E4%B8%BA%E4%BB%80%E4%B9%88%E5%B9%82%E7%AD%89%E6%93%8D%E4%BD%9C%E5%A6%82%E6%AD%A4%E9%87%8D%E8%A6%81"><span class="nav-number">2.4.</span> <span class="nav-text">什么是幂等操作? 为什么幂等操作如此重要?</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#REST-%E6%98%AF%E5%8F%AF%E6%89%A9%E5%B1%95%E7%9A%84%E6%88%96%E8%AF%B4%E6%98%AF%E5%8D%8F%E5%90%8C%E7%9A%84%E5%90%97"><span class="nav-number">2.5.</span> <span class="nav-text">REST 是可扩展的或说是协同的吗?</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#REST-%E7%94%A8%E5%93%AA%E7%A7%8D-HTTP-%E6%96%B9%E6%B3%95%E5%91%A2"><span class="nav-number">2.6.</span> <span class="nav-text">REST 用哪种 HTTP 方法呢?</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%88%A0%E9%99%A4%E7%9A%84-HTTP-%E7%8A%B6%E6%80%81%E8%BF%94%E5%9B%9E%E7%A0%81%E6%98%AF%E4%BB%80%E4%B9%88"><span class="nav-number">2.7.</span> <span class="nav-text">删除的 HTTP 状态返回码是什么 ?</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#REST-API-%E6%98%AF%E6%97%A0%E7%8A%B6%E6%80%81%E7%9A%84%E5%90%97"><span class="nav-number">2.8.</span> <span class="nav-text">REST API 是无状态的吗?</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#REST%E5%AE%89%E5%85%A8%E5%90%97-%E4%BD%A0%E8%83%BD%E5%81%9A%E4%BB%80%E4%B9%88%E6%9D%A5%E4%BF%9D%E6%8A%A4%E5%AE%83"><span class="nav-number">2.9.</span> <span class="nav-text">REST安全吗? 你能做什么来保护它?</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#RestTemplate-%E7%9A%84%E4%BC%98%E5%8A%BF%E6%98%AF%E4%BB%80%E4%B9%88"><span class="nav-number">2.10.</span> <span class="nav-text">RestTemplate 的优势是什么?</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#HttpMessageConverter-%E5%9C%A8-Spring-REST-%E4%B8%AD%E4%BB%A3%E8%A1%A8%E4%BB%80%E4%B9%88"><span class="nav-number">2.11.</span> <span class="nav-text">HttpMessageConverter 在 Spring REST 中代表什么?</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%A6%82%E4%BD%95%E5%88%9B%E5%BB%BA-HttpMessageConverter-%E7%9A%84%E8%87%AA%E5%AE%9A%E4%B9%89%E5%AE%9E%E7%8E%B0%E6%9D%A5%E6%94%AF%E6%8C%81%E4%B8%80%E7%A7%8D%E6%96%B0%E7%9A%84%E8%AF%B7%E6%B1%82-%E5%93%8D%E5%BA%94%EF%BC%9F"><span class="nav-number">2.12.</span> <span class="nav-text">如何创建 HttpMessageConverter 的自定义实现来支持一种新的请求&#x2F;响应？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#PathVariable-%E6%B3%A8%E8%A7%A3%EF%BC%8C%E5%9C%A8-Spring-MVC-%E5%81%9A%E4%BA%86%E4%BB%80%E4%B9%88-%E4%B8%BA%E4%BB%80%E4%B9%88-REST-%E5%9C%A8-Spring-%E4%B8%AD%E5%A6%82%E6%AD%A4%E6%9C%89%E7%94%A8%EF%BC%9F"><span class="nav-number">2.13.</span> <span class="nav-text">@PathVariable 注解，在 Spring MVC 做了什么? 为什么 REST 在 Spring 中如此有用？</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Seif Zheng"
+      src="/images/avatar.gif">
+  <p class="site-author-name" itemprop="name">Seif Zheng</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">17</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/fatefrank" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;fatefrank" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:astutenicol@gmail.com" title="E-Mail → mailto:astutenicol@gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Seif Zheng</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

@@ -159,6 +159,629 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://fatefrank.github.io/2020/07/21/05-memory-allocation-gc/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Seif Zheng">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Seif Zheng's blog">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2020/07/21/05-memory-allocation-gc/" class="post-title-link" itemprop="url">JVM 系列(五) - 内存分配与回收策略</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-07-21 00:00:00" itemprop="dateCreated datePublished" datetime="2020-07-21T00:00:00+08:00">2020-07-21</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-08-04 15:56:20" itemprop="dateModified" datetime="2020-08-04T15:56:20+08:00">2020-08-04</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id=""><a href="#" class="headerlink" title=""></a></h1><p>对象的内存分配，就是在堆上分配（也可能经过 JIT 编译后被拆散为标量类型并间接在栈上分配），对象主要分配在新生代的 Eden 区上，少数情况下可能直接分配在老年代，<strong>分配规则不固定</strong>，取决于当前使用的垃圾收集器组合以及相关的参数配置。</p>
+<p>以下列举几条最普遍的内存分配规则，供大家学习。</p>
+<h2 id="对象优先在-Eden-分配"><a href="#对象优先在-Eden-分配" class="headerlink" title="对象优先在 Eden 分配"></a>对象优先在 Eden 分配</h2><p>大多数情况下，对象在新生代 Eden 区中分配。当 Eden 区没有足够空间进行分配时，虚拟机将发起一次 Minor GC。</p>
+<p>👇<strong>Minor GC</strong> vs <strong>Major GC</strong>/<strong>Full GC</strong>：</p>
+<ul>
+<li>Minor GC：回收新生代（包括 Eden 和 Survivor 区域），因为 Java 对象大多都具备朝生夕灭的特性，所以 Minor GC 非常频繁，一般回收速度也比较快。</li>
+<li>Major GC / Full GC: 回收老年代，出现了 Major GC，经常会伴随至少一次的 Minor GC，但这并非绝对。Major GC 的速度一般会比 Minor GC 慢 10 倍 以上。 </li>
+</ul>
+<blockquote>
+<p>在 JVM 规范中，Major GC 和 Full GC 都没有一个正式的定义，所以有人也简单地认为 Major GC 清理老年代，而 Full GC 清理整个内存堆。</p>
+</blockquote>
+<h2 id="大对象直接进入老年代"><a href="#大对象直接进入老年代" class="headerlink" title="大对象直接进入老年代"></a>大对象直接进入老年代</h2><p>大对象是指需要大量连续内存空间的 Java 对象，如很长的字符串或数据。</p>
+<p>一个大对象能够存入 Eden 区的概率比较小，发生分配担保的概率比较大，而分配担保需要涉及大量的复制，就会造成效率低下。</p>
+<p>虚拟机提供了一个 -XX:PretenureSizeThreshold 参数，令大于这个设置值的对象直接在老年代分配，这样做的目的是避免在 Eden 区及两个 Survivor 区之间发生大量的内存复制。（还记得吗，新生代采用复制算法回收垃圾）</p>
+<h2 id="长期存活的对象将进入老年代"><a href="#长期存活的对象将进入老年代" class="headerlink" title="长期存活的对象将进入老年代"></a>长期存活的对象将进入老年代</h2><p>JVM 给每个对象定义了一个对象年龄计数器。当新生代发生一次 Minor GC 后，存活下来的对象年龄 +1，当年龄超过一定值时，就将超过该值的所有对象转移到老年代中去。</p>
+<p>使用 -XXMaxTenuringThreshold 设置新生代的最大年龄，只要超过该参数的新生代对象都会被转移到老年代中去。</p>
+<h2 id="动态对象年龄判定"><a href="#动态对象年龄判定" class="headerlink" title="动态对象年龄判定"></a>动态对象年龄判定</h2><p>如果当前新生代的 Survivor 中，低于或等于某年龄的所有对象的大小总和大于 Survivor 空间的一半，年龄 &gt;= 该年龄的对象就可以直接进入老年代，无须等到 MaxTenuringThreshold 中要求的年龄。</p>
+<h2 id="空间分配担保"><a href="#空间分配担保" class="headerlink" title="空间分配担保"></a>空间分配担保</h2><p>JDK 6 Update 24 之前的规则是这样的：<br>在发生 Minor GC 之前，虚拟机会先检查<strong>老年代最大可用的连续空间是否大于新生代所有对象总空间</strong>， 如果这个条件成立，Minor GC 可以确保是安全的； 如果不成立，则虚拟机会查看 HandlePromotionFailure 值是否设置为允许担保失败， 如果是，那么会继续检查老年代最大可用的连续空间是否大于历次晋升到老年代对象的平均大小， 如果大于，将尝试进行一次 Minor GC,尽管这次 Minor GC 是有风险的； 如果小于，或者 HandlePromotionFailure 设置不允许冒险，那此时也要改为进行一次 Full GC。</p>
+<p>JDK 6 Update 24 之后的规则变为：<br>只要老年代的连续空间大于新生代对象总大小或者历次晋升的平均大小，就会进行 Minor GC，否则将进行 Full GC。</p>
+<p>通过清除老年代中废弃数据来扩大老年代空闲空间，以便给新生代作担保。</p>
+<p>这个过程就是分配担保。</p>
+<hr>
+<p>👇总结一下有哪些情况可能会触发 JVM 进行 Full GC。</p>
+<ol>
+<li><p>System.gc() 方法的调用<br><br>此方法的调用是建议 JVM 进行 Full GC，注意这<strong>只是建议而非一定</strong>，但在很多情况下它会触发 Full GC，从而增加 Full GC 的频率。通常情况下我们只需要让虚拟机自己去管理内存即可，我们可以通过 -XX:+ DisableExplicitGC 来禁止调用 System.gc()。</p>
+</li>
+<li><p>老年代空间不足<br><br>老年代空间不足会触发 Full GC操作，若进行该操作后空间依然不足，则会抛出如下错误：<br><br><code>java.lang.OutOfMemoryError: Java heap space</code></p>
+</li>
+<li><p>永久代空间不足(JDK 8之后使用元空间)<br><br>JVM 规范中运行时数据区域中的方法区，在 HotSpot 虚拟机中也称为永久代（Permanet Generation），存放一些类信息、常量、静态变量等数据，当系统要加载的类、反射的类和调用的方法较多时，永久代可能会被占满，会触发 Full GC。如果经过 Full GC 仍然回收不了，那么 JVM 会抛出如下错误信息：<br><br><code>java.lang.OutOfMemoryError: PermGen space </code></p>
+</li>
+<li><p>CMS GC 时出现 promotion failed 和 concurrent mode failure<br><br>promotion failed，就是上文所说的担保失败，而 concurrent mode failure 是在执行 CMS GC 的过程中同时有对象要放入老年代，而此时老年代空间不足造成的。</p>
+</li>
+<li><p>统计得到的Minor GC晋升到旧生代的平均大小大于老年代的剩余空间</p>
+</li>
+</ol>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://fatefrank.github.io/2020/07/18/04-hotspot-gc/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Seif Zheng">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Seif Zheng's blog">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2020/07/18/04-hotspot-gc/" class="post-title-link" itemprop="url">JVM 系列(四) - HotSpot 垃圾收集器</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-07-18 00:00:00" itemprop="dateCreated datePublished" datetime="2020-07-18T00:00:00+08:00">2020-07-18</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-08-04 15:56:00" itemprop="dateModified" datetime="2020-08-04T15:56:00+08:00">2020-08-04</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="HotSpot-垃圾收集器"><a href="#HotSpot-垃圾收集器" class="headerlink" title="HotSpot 垃圾收集器"></a>HotSpot 垃圾收集器</h1><p>HotSpot 虚拟机提供了多种垃圾收集器，每种收集器都有各自的特点，虽然我们要对各个收集器进行比较，但并非为了挑选出一个最好的收集器。我们选择的只是对具体应用最合适的收集器。</p>
+<h2 id="新生代垃圾收集器"><a href="#新生代垃圾收集器" class="headerlink" title="新生代垃圾收集器"></a>新生代垃圾收集器</h2><h3 id="Serial-垃圾收集器（单线程）"><a href="#Serial-垃圾收集器（单线程）" class="headerlink" title="Serial 垃圾收集器（单线程）"></a>Serial 垃圾收集器（单线程）</h3><p>只开启<strong>一条</strong> GC 线程进行垃圾回收，并且在垃圾收集过程中停止一切用户线程(Stop The World)。</p>
+<p>一般客户端应用所需内存较小，不会创建太多对象，而且堆内存不大，因此垃圾收集器回收时间短，即使在这段时间停止一切用户线程，也不会感觉明显卡顿。因此 Serial 垃圾收集器<strong>适合客户端</strong>使用。</p>
+<p>由于 Serial 收集器只使用一条 GC 线程，避免了线程切换的开销，从而简单高效。 <img src="./images/serial.png" alt="Serial"></p>
+<h3 id="ParNew-垃圾收集器（多线程）"><a href="#ParNew-垃圾收集器（多线程）" class="headerlink" title="ParNew 垃圾收集器（多线程）"></a>ParNew 垃圾收集器（多线程）</h3><p>ParNew 是 Serial 的多线程版本。由多条 GC 线程并行地进行垃圾清理。但清理过程依然需要 Stop The World。</p>
+<p>ParNew 追求“<strong>低停顿时间</strong>”,与 Serial 唯一区别就是使用了多线程进行垃圾收集，在多 CPU 环境下性能比 Serial 会有一定程度的提升；但<strong>线程切换需要额外的开销</strong>，因此在单 CPU 环境中表现不如 Serial。</p>
+<p><img src="./images/parnew.png" alt="ParNew"></p>
+<h3 id="Parallel-Scavenge-垃圾收集器（多线程）"><a href="#Parallel-Scavenge-垃圾收集器（多线程）" class="headerlink" title="Parallel Scavenge 垃圾收集器（多线程）"></a>Parallel Scavenge 垃圾收集器（多线程）</h3><p>Parallel Scavenge 和 ParNew 一样，都是多线程、新生代垃圾收集器。但是两者有巨大的不同点：</p>
+<ul>
+<li>Parallel Scavenge：追求 CPU 吞吐量，能够在较短时间内完成指定任务，因此适合没有交互的后台计算。</li>
+<li>ParNew：追求降低用户停顿时间，适合交互式应用。</li>
+</ul>
+<p>吞吐量 = 运行用户代码时间 / (运行用户代码时间 + 垃圾收集时间)</p>
+<p>追求高吞吐量，可以通过减少 GC 执行实际工作的时间，然而，仅仅偶尔运行 GC 意味着每当 GC 运行时将有许多工作要做，因为在此期间积累在堆中的对象数量很高。单个 GC 需要花更多的时间来完成，从而导致更高的暂停时间。而考虑到低暂停时间，最好频繁运行 GC 以便更快速完成，反过来又导致吞吐量下降。</p>
+<ul>
+<li>通过参数 -XX:GCTimeRadio 设置垃圾回收时间占总 CPU 时间的百分比。</li>
+<li>通过参数 -XX:MaxGCPauseMillis 设置垃圾处理过程最久停顿时间。</li>
+<li>通过命令 -XX:+UseAdaptiveSizePolicy 开启自适应策略。我们只要设置好堆的大小和 MaxGCPauseMillis 或 GCTimeRadio，收集器会自动调整新生代的大小、Eden 和 Survivor 的比例、对象进入老年代的年龄，以最大程度上接近我们设置的 MaxGCPauseMillis 或 GCTimeRadio。</li>
+</ul>
+<h2 id="老年代垃圾收集器"><a href="#老年代垃圾收集器" class="headerlink" title="老年代垃圾收集器"></a>老年代垃圾收集器</h2><h3 id="Serial-Old-垃圾收集器（单线程）"><a href="#Serial-Old-垃圾收集器（单线程）" class="headerlink" title="Serial Old 垃圾收集器（单线程）"></a>Serial Old 垃圾收集器（单线程）</h3><p>Serial Old 收集器是 Serial 的老年代版本，都是单线程收集器，只启用一条 GC 线程，都适合客户端应用。它们唯一的区别就是：Serial Old 工作在老年代，使用“标记-整理”算法；Serial 工作在新生代，使用“复制”算法。</p>
+<h3 id="Parallel-Old-垃圾收集器（多线程）"><a href="#Parallel-Old-垃圾收集器（多线程）" class="headerlink" title="Parallel Old 垃圾收集器（多线程）"></a>Parallel Old 垃圾收集器（多线程）</h3><p>Parallel Old 收集器是 Parallel Scavenge 的老年代版本，追求 CPU 吞吐量。</p>
+<h3 id="CMS-垃圾收集器"><a href="#CMS-垃圾收集器" class="headerlink" title="CMS 垃圾收集器"></a>CMS 垃圾收集器</h3><p>CMS(Concurrent Mark Sweep，并发标记清除)收集器是以获取最短回收停顿时间为目标的收集器（追求低停顿），它在垃圾收集时使得用户线程和 GC 线程并发执行，因此在垃圾收集过程中用户也不会感到明显的卡顿。</p>
+<ul>
+<li>初始标记：Stop The World，仅使用一条初始标记线程对所有与 GC Roots 直接关联的对象进行标记。</li>
+<li>并发标记：使用<strong>多条</strong>标记线程，与用户线程并发执行。此过程进行可达性分析，标记出所有废弃对象。速度很慢。</li>
+<li>重新标记：Stop The World，使用多条标记线程并发执行，将刚才并发标记过程中新出现的废弃对象标记出来。</li>
+<li>并发清除：只使用一条 GC 线程，与用户线程并发执行，清除刚才标记的对象。这个过程非常耗时。</li>
+</ul>
+<p>并发标记与并发清除过程耗时最长，且可以与用户线程一起工作，因此，<strong>总体上说</strong>，CMS 收集器的内存回收过程是与用户线程<strong>一起并发执行</strong>的。</p>
+<p><img src="./images/cms.png" alt="CMS"></p>
+<p>CMS 的缺点：</p>
+<ul>
+<li>吞吐量低(并发标记会抢CPU，CMS默认启动的回收线程数是（处理器核心数量+3）/4，)</li>
+<li>无法处理浮动垃圾(在CMS的并发标记和并发清理阶段产生的垃圾)，导致频繁 Full GC</li>
+<li>使用“标记-清除”算法产生碎片空间</li>
+</ul>
+<p>对于产生碎片空间的问题，可以通过开启 -XX:+UseCMSCompactAtFullCollection，在每次 Full GC 完成后都会进行一次内存压缩整理，将零散在各处的对象整理到一块。设置参数 -XX:CMSFullGCsBeforeCompaction告诉 CMS，经过了 N 次 Full GC 之后再进行一次内存整理。</p>
+<h2 id="G1-通用垃圾收集器"><a href="#G1-通用垃圾收集器" class="headerlink" title="G1 通用垃圾收集器"></a>G1 通用垃圾收集器</h2><p>面向全堆的垃圾收集器。</p>
+<p><strong>目标</strong>：在延迟可控的情况下获得尽可能高的吞吐量。</p>
+<p><strong>原理</strong>：面向局部收集的设计思路和基于Region的内存布局形式。G1不再坚持固定大小以及固定数量的分代区域划分，而是把连续的Java堆划分为多个大小相等的独立区域（Region），每一个Region都可以根据需要，扮演新生代的Eden空间、Survivor空间，或者老年代空间。G1可以面向堆内存任何部分组成回收集进行回收，衡量标准不再是它属于哪个分代，而是哪块内存中存放的垃圾最多，回收收益最大，这就是G1的 Mixed GC 模式。</p>
+<blockquote>
+<p>Region 中还有一类特殊的 Humongous 区域，专门用来存储大对象。G1认为只要大小超过了一个 Region 容量一半的对象即可判定为大对象。</p>
+<p>每个Region的大小可以通过参数-XX：G1HeapRegionSize 设定，取值范围为1MB～32MB，且应为2的N次幂。</p>
+<p>对于那些超过了整个Region容量的超级大对象，将会被存放在N个连续的 Humongous Region 之中，G1的大多数行为都把Humongous Region作为老年代的一部分来进行看待。</p>
+</blockquote>
+<blockquote>
+<p>G1将Region作为单次回收的最小单元，每次收集到的内存空间都是Region大小的整数倍，有计划地避免全堆收集。</p>
+<p>G1收集器去跟踪各个Region里面的垃圾堆积的“价值”大小，价值即回收所获得的空间大小以及回收所需时间的经验值，然后在后台维护一个优先级列表，每次根据用户设定允许的收集停顿时间（使用参数-XX：MaxGCPauseMillis指定，默认值是200毫秒），优先处理回收价值收益最大的那些Region，这也是“Garbage First”名字的由来。</p>
+<p>这种使用Region划分内存空间，以及具有优先级的区域回收方式，保证了G1收集器在有限的时间内获取尽可能高的收集效率。</p>
+</blockquote>
+<p><strong>实现难点</strong>：</p>
+<p>1）将Java堆分成多个独立Region后，Region里面存在的跨Region引用对象如何解决？</p>
+<ul>
+<li>使用记忆集避免全堆作为GC Roots扫描，但记忆集实现比较复杂。</li>
+<li>每个Region都维护有自己的记忆集，这些记忆集会记录下别的Region指向自己的指针，并标记这些指针分别在哪些卡页的范围之内。</li>
+<li>G1的记忆集在存储结构的本质上是一种哈希表，Key是别的Region的起始地址，Value是一个集合，里面存储的元素是卡表的索引号。如此一来，就能知道当前 Region 中，哪些 Region 的哪些卡页指向了我。</li>
+<li>作为代价，这种复杂的卡表实现使得 G1 比其它收集器有着更高的内存占用负担。</li>
+</ul>
+<p>2）在并发标记阶段如何保证收集线程与用户线程互不干扰地运行？</p>
+<ul>
+<li>G1收集器则是通过原始快照（SATB）算法来实现的。</li>
+</ul>
+<p>3）回收过程中新创建对象的内存分配怎么办？</p>
+<ul>
+<li>G1为每一个Region设计了两个名为TAMS（Top at Mark Start）的指针，把Region中的一部分空间划分出来用于并发回收过程中的新对象分配，并发回收时新分配的对象地址都必须要在这两个指针位置以上。G1收集器默认在这个地址以上的对象是被隐式标记过的，即默认它们是存活的，不纳入回收范围。</li>
+</ul>
+<p>4）如何建立起可靠的停顿预测模型？</p>
+<ul>
+<li>G1收集器的停顿预测模型是以衰减均值（Decaying Average）为理论基础来实现的，在垃圾收集过程中，G1收集器会记录每个Region的回收耗时、每个Region记忆集里的脏卡数量等各个可测量的步骤花费的成本，并分析得出平均值、标准偏差、置信度等统计信息。</li>
+<li>这里强调的“衰减平均值”是指它会比普通的平均值更容易受到新数据的影响，平均值代表整体平均状态，但衰减平均值更准确地代表“最近的”平均状态。即 Region 的统计状态越新越能决定其回收的价值。</li>
+<li>然后通过这些信息预测现在开始回收的话，由哪些Region组成回收集才可以在不超过期望停顿时间的约束下获得最高的收益。</li>
+</ul>
+<p><strong>运作过程</strong>：</p>
+<p>如果我们不去计算用户线程运行过程中的动作（如使用写屏障维护记忆集的操作），G1收集器的运作过程大致可划分为以下四个步骤：</p>
+<ul>
+<li><p>初始标记：标记 GC Roots 能直接关联到的对象，并修改 TAMS 指针的值，让下一阶段用户线程并发运行时，能正确地在可用的 Region 中分配对象。</p>
+<blockquote>
+<p>G1 为每一个 Region 设计两个名为 TAMS (Top at Mark Start) 的指针，把 Region 中的一部分空间划分出来用于并发回收过程中的新对象分配，并发回收时新分配的对象地址必须要在这两个指针位置上。G1 默认在 TAMS 指针上的对象是被隐式标记过的，即默认它们是存活的，不纳入回收范围。</p>
+</blockquote>
+</li>
+<li><p>并发标记：从 GC Roots 开始对堆中对象进行可达性分析，递归扫描整个堆里的对象图，找出要回收的对象，耗时较长，可与用户线程并发执行。</p>
+</li>
+<li><p>最终标记：对用户线程做另一个短暂的暂停，用户处理并发阶段结束后仍遗留下来的那少量的 SATB 记录。</p>
+</li>
+<li><p>筛选回收：负责更新 Region 的统计数据，对各个 Region 的回收价值和成本进行排序，根据用户所期望的停顿时间来制定回收计划，可以自由选择任意多个 Region 构成回收集，然后把决定回收的那一部分 Region 的存活对象复制到空的 Region 的中，在清理掉整个旧的 Region 的全部空间。</p>
+</li>
+</ul>
+<p><strong>应用场景</strong>：面向服务端应用，JDK 9 发布之日，G1 就成为服务端模式下的默认垃圾收集器。设置不同的期望停顿时间，可以让 G1 在不同应用场景中取得关注吞吐量和关注延迟之间的最佳平衡。默认停顿时间是 200ms 。通常把停顿时间设置为 100-200ms 或 200-300ms 比较合理。</p>
+<p><strong>缺点</strong>：相比 CMS，在用户程序运行过程中，G1 无论是为了垃圾收集产生的内存占用还是程序运行时的额外执行负载都要比 CMS 高。</p>
+<p><strong>收集算法</strong>：</p>
+<p>从整体上看， G1 是基于“标记-整理”算法实现的收集器，从局部（两个 Region 之间）上看是基于“复制”算法实现的，这意味着运行期间不会产生内存空间碎片。</p>
+<p><strong>这里抛个问题</strong>👇<br><br>一个对象和它内部所引用的对象可能不在同一个 Region 中，那么当垃圾回收时，是否需要扫描整个堆内存才能完整地进行一次可达性分析(准确的说是”根节点枚举”这一步)？</p>
+<p>并不！每个 Region 都有一个记忆集，用于记录本区域中所有对象引用的对象所在的区域，进行可达性分析(根节点枚举)时，只要在 GC Roots 中再加上记忆集即可防止对整个堆内存进行遍历。</p>
+<h2 id="低延迟垃圾收集器-实验状态"><a href="#低延迟垃圾收集器-实验状态" class="headerlink" title="低延迟垃圾收集器(实验状态)"></a>低延迟垃圾收集器(实验状态)</h2><h3 id="Shenandoah收集器"><a href="#Shenandoah收集器" class="headerlink" title="Shenandoah收集器"></a>Shenandoah收集器</h3><p>略</p>
+<h3 id="ZGC收集器"><a href="#ZGC收集器" class="headerlink" title="ZGC收集器"></a>ZGC收集器</h3><p>略</p>
+<h2 id="选择合适的垃圾收集器"><a href="#选择合适的垃圾收集器" class="headerlink" title="选择合适的垃圾收集器"></a>选择合适的垃圾收集器</h2><h3 id="Epsilon收集器-不GC的收集器"><a href="#Epsilon收集器-不GC的收集器" class="headerlink" title="Epsilon收集器(不GC的收集器)"></a>Epsilon收集器(不GC的收集器)</h3><p>垃圾回收器控制内存分配，但是不执行任何垃圾回收工作。一旦java的堆被耗尽，jvm就直接关闭。</p>
+<p>设计的目的是提供一个完全消极的GC实现，分配有限的内存分配，最大限度降低消费内存占用量和内存吞吐时的延迟时间。一个好的实现是隔离代码变化，不影响其他GC，最小限度的改变其他的JVM代码。</p>
+<h3 id="垃圾收集器日志"><a href="#垃圾收集器日志" class="headerlink" title="垃圾收集器日志"></a>垃圾收集器日志</h3><p>在JDK 9以前，HotSpot并没有提供统一的日志处理框架，直到JDK 9，这种混乱不堪的局面才终于消失，HotSpot所有功能的日志都收归到了“-Xlog”参数上</p>
+<p>-Xlog[:[selector][:[output][:[decorators] [:output-options]]]]</p>
+<p>详细见书</p>
+<h3 id="垃圾收集器参数总结"><a href="#垃圾收集器参数总结" class="headerlink" title="垃圾收集器参数总结"></a>垃圾收集器参数总结</h3><p>详细见书</p>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://fatefrank.github.io/2020/07/15/03-gc-algorithms/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Seif Zheng">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Seif Zheng's blog">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2020/07/15/03-gc-algorithms/" class="post-title-link" itemprop="url">JVM 系列(三) - 垃圾收集策略与算法</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-07-15 00:00:00" itemprop="dateCreated datePublished" datetime="2020-07-15T00:00:00+08:00">2020-07-15</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-08-04 15:55:31" itemprop="dateModified" datetime="2020-08-04T15:55:31+08:00">2020-08-04</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="垃圾收集策略与算法"><a href="#垃圾收集策略与算法" class="headerlink" title="垃圾收集策略与算法"></a>垃圾收集策略与算法</h1><p>程序计数器、虚拟机栈、本地方法栈随线程而生，也随线程而灭；栈帧随着方法的开始而入栈，随着方法的结束而出栈。这几个区域的内存分配和回收都具有确定性，在这几个区域内不需要过多考虑回收的问题，因为方法结束或者线程结束时，内存自然就跟随着回收了。</p>
+<p>而对于 Java 堆和方法区，我们只有在程序运行期间才能知道会创建哪些对象，这部分内存的分配和回收都是动态的，垃圾收集器所关注的正是这部分内存。</p>
+<h2 id="判定对象是否存活"><a href="#判定对象是否存活" class="headerlink" title="判定对象是否存活"></a>判定对象是否存活</h2><p>若一个对象不被任何对象或变量引用，那么它就是无效对象，需要被回收。</p>
+<h3 id="引用计数法"><a href="#引用计数法" class="headerlink" title="引用计数法"></a>引用计数法</h3><p>在对象头维护着一个 counter 计数器，对象被引用一次则计数器 +1；若引用失效则计数器 -1。当计数器为 0 时，就认为该对象无效了。</p>
+<p>引用计数算法的实现简单，判定效率也很高，在大部分情况下它都是一个不错的算法。但是主流的 Java 虚拟机里没有选用引用计数算法来管理内存，主要是因为它很难解决对象之间循环引用的问题。</p>
+<blockquote>
+<p>举个栗子👉对象 objA 和 objB 都有字段 instance，令 objA.instance = objB 并且 objB.instance = objA，由于它们互相引用着对方，导致它们的引用计数都不为 0，于是引用计数算法无法通知 GC 收集器回收它们。</p>
+</blockquote>
+<h3 id="可达性分析法"><a href="#可达性分析法" class="headerlink" title="可达性分析法"></a>可达性分析法</h3><p>所有和 GC Roots 直接或间接关联的对象都是有效对象，和 GC Roots 没有关联的对象就是无效对象。</p>
+<p>GC Roots 是指：</p>
+<ul>
+<li>Java 虚拟机栈（栈帧中的本地变量表）中引用的对象，譬如各个线程被调用的方法堆栈中使用到的<br>参数、局部变量、临时变量等。</li>
+<li>本地方法栈中JNI（即通常所说的Native方法）引用的对象</li>
+<li>方法区中常量引用的对象，譬如字符串常量池（String Table）里的引用。</li>
+<li>方法区中类静态属性引用的对象，譬如Java类的引用类型静态变量。</li>
+<li>Java虚拟机内部的引用，如基本数据类型对应的Class对象，一些常驻的异常对象（比如<br>NullPointExcepiton、OutOfMemoryError）等，还有系统类加载器。</li>
+<li>所有被同步锁（synchronized关键字）持有的对象。</li>
+<li>反映Java虚拟机内部情况的JMXBean、JVMTI中注册的回调、本地代码缓存等。</li>
+</ul>
+<p>GC Roots 并不包括堆中对象所引用的对象，这样就不会有循环引用的问题。</p>
+<p>除了这些固定的GC Roots集合以外，根据用户所选用的垃圾收集器以及当前回收的内存区域不同，还可以有其他对象“临时性”地加入，共同构成完整GC Roots集合。</p>
+<h2 id="引用的种类"><a href="#引用的种类" class="headerlink" title="引用的种类"></a>引用的种类</h2><p>判定对象是否存活与“引用”有关。在 JDK 1.2 以前，Java 中的引用定义很传统，一个对象只有被引用或者没有被引用两种状态，我们希望能描述这一类对象：当内存空间还足够时，则保留在内存中；如果内存空间在进行垃圾手收集后还是非常紧张，则可以抛弃这些对象。很多系统的缓存功能都符合这样的应用场景。</p>
+<p>在 JDK 1.2 之后，Java 对引用的概念进行了扩充，将引用分为了以下四种。不同的引用类型，主要体现的是对象不同的可达性状态<code>reachable</code>和垃圾收集的影响。</p>
+<h3 id="强引用（Strong-Reference）"><a href="#强引用（Strong-Reference）" class="headerlink" title="强引用（Strong Reference）"></a>强引用（Strong Reference）</h3><p>类似 “Object obj = new Object()” 这类的引用，就是强引用，只要强引用存在，垃圾收集器永远不会回收被引用的对象。但是，如果我们<strong>错误地保持了强引用</strong>，比如：赋值给了 static 变量，那么对象在很长一段时间内不会被回收，会产生内存泄漏。</p>
+<h3 id="软引用（Soft-Reference）"><a href="#软引用（Soft-Reference）" class="headerlink" title="软引用（Soft Reference）"></a>软引用（Soft Reference）</h3><p>软引用是一种相对强引用弱化一些的引用，可以让对象豁免一些垃圾收集，只有当 JVM 认为内存不足时，才会去试图回收软引用指向的对象。JVM 会确保在抛出 OutOfMemoryError 之前，清理软引用指向的对象。软引用通常用来<strong>实现内存敏感的缓存</strong>，如果还有空闲内存，就可以暂时保留缓存，当内存不足时清理掉，这样就保证了使用缓存的同时，不会耗尽内存。在JDK 1.2版之后提供了SoftReference类来实现软引用。</p>
+<h3 id="弱引用（Weak-Reference）"><a href="#弱引用（Weak-Reference）" class="headerlink" title="弱引用（Weak Reference）"></a>弱引用（Weak Reference）</h3><p>弱引用的<strong>强度比软引用更弱</strong>一些。当 JVM 进行垃圾回收时，<strong>无论内存是否充足，都会回收</strong>只被弱引用关联的对象。在JDK 1.2版之后提供了WeakReference类来实现弱引用。</p>
+<h3 id="虚引用（Phantom-Reference）"><a href="#虚引用（Phantom-Reference）" class="headerlink" title="虚引用（Phantom Reference）"></a>虚引用（Phantom Reference）</h3><p>虚引用也称幽灵引用或者幻影引用，它是<strong>最弱</strong>的一种引用关系。一个对象是否有虚引用的存在，完全不会对其生存时间构成影响。它仅仅是提供了一种确保对象被 finalize 以后，做某些事情的机制，比如，通常用来做所谓的 Post-Mortem 清理机制。在JDK 1.2版之后提供了PhantomReference类来实现虚引用。</p>
+<h2 id="回收堆中无效对象"><a href="#回收堆中无效对象" class="headerlink" title="回收堆中无效对象"></a>回收堆中无效对象</h2><p>对于可达性分析中不可达的对象，也并不是没有存活的可能。</p>
+<h3 id="判定-finalize-是否有必要执行"><a href="#判定-finalize-是否有必要执行" class="headerlink" title="判定 finalize() 是否有必要执行"></a>判定 finalize() 是否有必要执行</h3><p>JVM 会判断此对象是否有必要执行 finalize() 方法，如果对象没有覆盖 finalize() 方法，或者 finalize() 方法已经被虚拟机调用过，那么视为“没有必要执行”。那么对象基本上就真的被回收了。</p>
+<p>如果对象被判定为有必要执行 finalize() 方法，那么对象会被放入一个 F-Queue 队列中，虚拟机会以较低的优先级执行这些 finalize()方法，但不会确保所有的 finalize() 方法都会执行结束。如果 finalize() 方法出现耗时操作，虚拟机就直接停止执行该方法，将对象清除。</p>
+<h3 id="对象重生或死亡"><a href="#对象重生或死亡" class="headerlink" title="对象重生或死亡"></a>对象重生或死亡</h3><p>如果在执行 finalize() 方法时，将 this 赋给了某一个引用，那么该对象就重生了。如果没有，那么就会被垃圾收集器清除。</p>
+<blockquote>
+<p>任何一个对象的 finalize() 方法只会被系统自动调用一次，如果对象面临下一次回收，它的 finalize() 方法不会被再次执行，想继续在 finalize() 中自救就失效了。</p>
+<p>不推荐使用 finalize() 方法！！！</p>
+</blockquote>
+<h2 id="回收方法区内存"><a href="#回收方法区内存" class="headerlink" title="回收方法区内存"></a>回收方法区内存</h2><p>方法区中存放生命周期较长的类信息、常量、静态变量，每次垃圾收集只有少量的垃圾被清除。方法区中主要清除两种垃圾：</p>
+<ul>
+<li>废弃常量</li>
+<li>无用的类</li>
+</ul>
+<h3 id="判定废弃常量"><a href="#判定废弃常量" class="headerlink" title="判定废弃常量"></a>判定废弃常量</h3><p>只要常量池中的常量不被任何变量或对象引用，那么这些常量就会被清除掉。比如，一个字符串 “bingo” 进入了常量池，但是当前系统没有任何一个 String 对象引用常量池中的 “bingo” 常量，也没有其它地方引用这个字面量，必要的话，”bingo”常量会被清理出常量池。</p>
+<h3 id="判定无用的类"><a href="#判定无用的类" class="headerlink" title="判定无用的类"></a>判定无用的类</h3><p>判定一个类是否是“无用的类”，条件较为苛刻。</p>
+<ul>
+<li>该类的所有对象都已经被清除</li>
+<li>加载该类的 ClassLoader 已经被回收</li>
+<li>该类的 java.lang.Class 对象没有在任何地方被引用，无法在任何地方通过反射访问该类的方法。</li>
+</ul>
+<blockquote>
+<p>一个类被虚拟机加载进方法区，那么在堆中就会有一个代表该类的对象：java.lang.Class。这个对象在类被加载进方法区时创建，在方法区该类被删除时清除。</p>
+</blockquote>
+<p>Java虚拟机被允许对满足上述三个条件的无用类进行回收，这里说的仅仅是“被允许”，而并不是和对象一样，没有引用了就必然会回收。</p>
+<p>关于是否要对类型进行回收，HotSpot虚拟机提供了-Xnoclassgc参数进行控制，还可以使用-verbose：class以及-XX：+TraceClass-Loading、-XX：+TraceClassUnLoading查看类加载和卸载信息，其中-verbose：class和-XX：+TraceClassLoading可以在Product版的虚拟机中使用，-XX：+TraceClassUnLoading参数需要FastDebug版的虚拟机支持。</p>
+<p>在大量使用反射、动态代理、CGLib等字节码框架，动态生成JSP以及OSGi这类频繁自定义类加载器的场景中，通常都需要Java虚拟机具备类型卸载的能力，以保证不会对方法区造成过大的内存压力。</p>
+<h2 id="垃圾收集算法"><a href="#垃圾收集算法" class="headerlink" title="垃圾收集算法"></a>垃圾收集算法</h2><h3 id="分代收集理论"><a href="#分代收集理论" class="headerlink" title="分代收集理论"></a>分代收集理论</h3><p><strong>分代假说</strong>：</p>
+<p>1）弱分代假说（Weak Generational Hypothesis）：绝大多数对象都是朝生夕灭的。</p>
+<p>2）强分代假说（Strong Generational Hypothesis）：熬过越多次垃圾收集过程的对象就越难以消亡。</p>
+<p>3）跨代引用假说（Intergenerational Reference Hypothesis）：跨代引用相对于同代引用来说仅占极少数。</p>
+<blockquote>
+<p>即 存在互相引用关系的两个对象，是应该倾向于同时生存或者同时消亡的。</p>
+</blockquote>
+<p><strong>假说1和2奠定的垃圾收集器的设计原则</strong>：</p>
+<p>收集器应该将Java堆划分出不同的区域，然后将回收对象依据其年龄（年龄即对象熬过垃圾收集过程的次数）分配到不同的区域之中存储。</p>
+<blockquote>
+<p>如果一个区域中大多数对象大多朝生夕灭，回收时关注保留少量存活；如果剩下的都是难以消亡的对象，那把它们集中放在一块，虚拟机便可以使用较低的频率来回收这个区域。</p>
+</blockquote>
+<p><strong>商业虚拟机实现</strong>：</p>
+<p>把分代收集理论具体放到现在的商用Java虚拟机里，设计者一般至少会把Java堆划分为新生代和老年代两个区域。顾名思义，在新生代中，每次垃圾收集时都发现有大批对象死去，而每次回收后存活的少量对象，将会逐步晋升到老年代中存放。</p>
+<p><strong>跨代收集的痛点</strong>：</p>
+<p>假如要现在进行一次只局限于新生代区域内的收集（Minor GC），但新生代中的对象是完全有可能被老年代所引用的，为了找出该区域中的存活对象，不得不在固定的GC Roots之外，再额外遍历整个老年代中所有对象来确保可达性分析结果的正确性，反过来也是一样。这会为内存回收带来很大的性能负担。</p>
+<p><strong>基于假说3的跨代收集解决方案</strong>：</p>
+<p>依据这条假说，我们就不应再为了少量的跨代引用去扫描整个老年代，也不必浪费空间专门记录每一个对象是否存在及存在哪些跨代引用，只需在新生代上建立一个全局的数据结构（该结构被称为“记忆集”，Remembered Set），这个结构把老年代划分成若干小块，标识出老年代的哪一块内存会存在跨代引用。此后当发生Minor GC时，只有包含了跨代引用的小块内存里的对象才会被加入到GC Roots进行扫描。虽然这种方法需要在对象改变引用关系（如将自己或者某个属性赋值）时维护记录数据的正确性，会增加一些运行时的开销，但比起收集时扫描整个老年代来说仍然是划算的。</p>
+<blockquote>
+<p>一些术语：</p>
+<p>部分收集（Partial GC）：指目标不是完整收集整个Java堆的垃圾收集，其中又分为：</p>
+<ul>
+<li><p>新生代收集（Minor GC/Young GC）：指目标只是新生代的垃圾收集。</p>
+</li>
+<li><p>老年代收集（Major GC/Old GC）：指目标只是老年代的垃圾收集。目前只有CMS收集器会有单<br>独收集老年代的行为。另外请注意“Major GC”这个说法现在有点混淆，在不同资料上常有不同所指，<br>读者需按上下文区分到底是指老年代的收集还是整堆收集。</p>
+</li>
+<li><p>混合收集（Mixed GC）：指目标是收集整个新生代以及部分老年代的垃圾收集。目前只有G1收<br>集器会有这种行为。</p>
+</li>
+</ul>
+<p>整堆收集（Full GC）：收集整个Java堆和方法区的垃圾收集。</p>
+</blockquote>
+<h3 id="标记-清除算法"><a href="#标记-清除算法" class="headerlink" title="标记-清除算法"></a>标记-清除算法</h3><p><strong>标记</strong>的过程是：遍历所有的 <code>GC Roots</code>，然后将所有 <code>GC Roots</code> 可达的对象<strong>标记为存活的对象</strong>。</p>
+<p><strong>清除</strong>的过程将遍历堆中所有的对象，将没有标记的对象全部清除掉。与此同时，清除那些被标记过的对象的标记，以便下次的垃圾回收。 </p>
+<blockquote>
+<p>标记-清除算法需要停顿用户线程来标记、清理可回收对象的，但是停顿时间相对标记-整理要短。</p>
+</blockquote>
+<p>这种方法有两个<strong>不足</strong>：</p>
+<ul>
+<li>效率问题：标记和清除两个过程的效率都不高。</li>
+<li>空间问题：标记清除之后会产生大量不连续的内存碎片，碎片太多可能导致以后需要分配较大对象时，无法找到足够的连续内存而不得不提前触发另一次垃圾收集动作。</li>
+</ul>
+<h3 id="复制算法（新生代）"><a href="#复制算法（新生代）" class="headerlink" title="复制算法（新生代）"></a>复制算法（新生代）</h3><p>为了解决效率问题，“复制”收集算法出现了。它将可用内存按容量划分为大小相等的两块，每次只使用其中的一块。当这一块内存用完，需要进行垃圾收集时，就将存活者的对象复制到另一块上面，然后将第一块内存全部清除。这种算法有优有劣：</p>
+<ul>
+<li>优点：不会有内存碎片的问题。</li>
+<li>缺点：内存缩小为原来的一半，浪费空间。</li>
+</ul>
+<p>为了解决空间利用率问题，可以将内存分为三块： Eden、From Survivor、To Survivor，比例是 8:1:1，每次使用 Eden 和其中一块 Survivor。回收时，将 Eden 和 Survivor 中还存活的对象一次性复制到另外一块 Survivor 空间上，最后清理掉 Eden 和刚才使用的 Survivor 空间。这样只有 10% 的内存被浪费。</p>
+<p>但是我们无法保证每次回收都只有不多于 10% 的对象存活，当 Survivor 空间不够，需要依赖其他内存（指老年代）进行分配担保。</p>
+<h4 id="分配担保"><a href="#分配担保" class="headerlink" title="分配担保"></a>分配担保</h4><p>如果另外一块Survivor空间没有足够空间存放上一次新生代收集下来的存活对象，这些对象便将通过分配担保机制直接进入老年代，这对虚拟机来说就是安全的。</p>
+<h3 id="标记-整理算法（老年代）"><a href="#标记-整理算法（老年代）" class="headerlink" title="标记-整理算法（老年代）"></a>标记-整理算法（老年代）</h3><p><strong>标记</strong>：它的第一个阶段与<strong>标记/清除算法</strong>是一模一样的，均是遍历 <code>GC Roots</code>，然后将存活的对象标记。</p>
+<p><strong>整理</strong>：移动所有<strong>存活的对象</strong>，且按照内存地址次序依次排列，然后将末端内存地址以后的内存全部回收。因此，第二阶段才称为整理阶段。</p>
+<p>这是一种老年代的垃圾收集算法。老年代的对象一般寿命比较长，因此每次垃圾回收会有大量对象存活，如果采用复制算法，每次需要复制大量存活的对象，效率很低。</p>
+<blockquote>
+<p>如果移动存活对象，尤其是在老年代这种每次回收都有大量对象存活区域，移动存活对象并更新所有引用这些对象的地方将会是一种极为负重的操作，而且这种对象移动操作必须全程暂停用户应用程序才能进行，这就更加让使用者不得不小心翼翼地权衡其弊端了，像这样的停顿被最初的虚拟机设计者形象地描述为“Stop The World”。</p>
+<p>但如果跟标记-清除算法那样完全不考虑移动和整理存活对象的话，弥散于堆中的存活对象导致的空间碎片化问题就只能依赖更为复杂的内存分配器和内存访问器来解决。内存的访问是用户程序最频繁的操作，甚至都没有之一，假如在这个环节上增加了额外的负担，势必会直接影响应用程序的吞吐量。</p>
+<p>基于以上两点，是否移动对象都存在弊端，移动则内存回收时会更复杂，不移动则内存分配时会更复杂。</p>
+<p>从垃圾收集的停顿时间来看，不移动对象停顿时间会更短，甚至可以不需要停顿，但是从整个程序的吞吐量来看，移动对象会更划算。此语境中，吞吐量的实质是赋值器（Mutator，可以理解为使用垃圾收集的用户程序，本书为便于理解，多数地方用“用户程序”或“用户线程”代替）与收集器的效率总和。即使不移动对象会使得收集器的效率提升一些，但因内存分配和访问相比垃圾收集频率要高得多，这部分的耗时增加，总吞吐量仍然是下降的。</p>
+<p>另外，还有一种“和稀泥式”解决方案可以不在内存分配和访问上增加太大额外负担，做法是让虚拟机平时多数时间都采用标记-清除算法，暂时容忍内存碎片的存在，直到内存空间的碎片化程度已经大到影响对象分配时，再采用标记-整理算法收集一次，以获得规整的内存空间。</p>
+</blockquote>
+<h3 id="分代收集算法"><a href="#分代收集算法" class="headerlink" title="分代收集算法"></a>分代收集算法</h3><p>根据对象存活周期的不同，将内存划分为几块。一般是把 Java 堆分为新生代和老年代，针对各个年代的特点采用最适当的收集算法。  </p>
+<ul>
+<li>新生代：复制算法</li>
+<li>老年代：标记-清除算法、标记-整理算法</li>
+</ul>
+<h2 id="HotSpot的算法实现细节"><a href="#HotSpot的算法实现细节" class="headerlink" title="HotSpot的算法实现细节"></a>HotSpot的算法实现细节</h2><h3 id="根节点枚举"><a href="#根节点枚举" class="headerlink" title="根节点枚举"></a>根节点枚举</h3><p>收集器在根节点枚举时都是必须暂停用户线程的，是为了保证根节点枚举必须在一个能保障一致性的快照中进行。</p>
+<p>HotSpot会使用一组称为OopMap的数据结构来直接得知哪些地方存放着对象引用。类加载完成时，HotSpot就会把对象内什么偏移量上是什么类型的数据计算出来，在即时编译过程中，也会在”特定位置”记录下栈里和寄存器里哪些位置是引用。</p>
+<h3 id="安全点"><a href="#安全点" class="headerlink" title="安全点"></a>安全点</h3><p>HotSpot没有为每条指令都生成OopMap，只是在“特定的位置”记录这些信息，这些位置被称为安全点。</p>
+<p>安全点位置的选取标准：是否具有让程序长时间执行的特征，长时间执行的最明显特征就是指令序列的复用，例如方法调用、循环跳转、异常跳转等，只有具有这些功能的指令才会产生安全点。</p>
+<p>如何在垃圾收集发生时让所有线程都跑到最近的安全点，然后停顿下来？</p>
+<p>抢先式中断：垃圾收集发生时，系统首先把所有用户线程全部中断，如果发现有用户线程中断的地方不在安全点上，就恢复这条线程执行，让它一会再重新中断，直到跑到安全点上。现在几乎没有虚拟机采用。</p>
+<p>主动式中断：垃圾收集发生时，设置一个标志位，各个线程执行过程时会不停地主动去轮询这个标志，一旦发现中断标志为真时就自己在最近的安全点上主动中断挂起。</p>
+<blockquote>
+<p>轮询标志的地方和安全点是重合的，另外还要加上所有创建对象和其他需要在Java堆上分配内存的地方，这是为了检查是否即将要发生垃圾收集，避免没有足够内存分配新对象。</p>
+<p>由于轮询操作在代码中会频繁出现，这要求它必须足够高效。HotSpot使用内存保护陷阱的方式，把轮询操作精简至只有一条汇编指令的程度。</p>
+</blockquote>
+<h3 id="安全区域"><a href="#安全区域" class="headerlink" title="安全区域"></a>安全区域</h3><p>概念：确保引用关系不会发生变化的某一代码片段，叫作”安全区域”。</p>
+<p>作用：主要解决用户线程处于 Sleep 或 Blocked 状态时无法响应虚拟机的中断请求。</p>
+<p>作用过程：当用户线程执行到安全区域里面的代码时，会标识自己已经进入了安全区域，在这段时间里虚拟机要发起垃圾收集时就不会管这些已声明自己在安全区域内的线程了。当线程要离开安全区域时，它要检查虚拟机是否已经完成了根节点枚举（或者垃圾收集过程中其他需要暂停用户线程的阶段），如果完成了，那线程继续执行；否则它就必须一直等待，直到收到可以离开安全区域的信号为止。</p>
+<blockquote>
+<p>我们可以把安全区域看作被扩展拉伸了的安全点。</p>
+</blockquote>
+<h3 id="记忆集与卡表"><a href="#记忆集与卡表" class="headerlink" title="记忆集与卡表"></a>记忆集与卡表</h3><p>为解决对象跨代引用所带来的问题，垃圾收集器在新生代中建立了名为记忆集的数据结构，用以避免把整个老年代加进GC Roots扫描范围。</p>
+<p>记忆集是一种用于记录从非收集区域指向收集区域的指针集合的抽象数据结构。</p>
+<p>记忆集的记录精度：</p>
+<p>字长精度：每个记录精确到一个机器字长（就是处理器的寻址位数，如常见的32位或64位，这个精度决定了机器访问物理内存地址的指针长度），该字包含跨代指针。<br>对象精度：每个记录精确到一个对象，该对象里有字段含有跨代指针。<br>卡精度：每个记录精确到一块内存区域，该区域内有对象含有跨代指针。</p>
+<p>卡表是记忆集基于”卡精度”的具体实现。</p>
+<p>卡表最简单的形式可以只是一个字节数组，而HotSpot虚拟机确实也是这样做的。</p>
+<p>字节数组CARD_TABLE的每一个元素都对应着其标识的内存区域中一块特定大小的内存块，这个内存块被称作“卡页”（Card Page）。一般来说，卡页大小都是以2的N次幂，HotSpot中使用的卡页是2的9次幂，即512字节。</p>
+<p>一个卡页的内存中通常包含不止一个对象，只要卡页内有一个（或更多）对象的字段存在着跨代指针，那就将对应卡表的数组元素的值标识为1，称为这个元素变脏（Dirty），没有则标识为0。在垃圾收集发生时，只要筛选出卡表中变脏的元素，就能轻易得出哪些卡页内存块中包含跨代指针，把它们加入GC Roots中一并扫描。</p>
+<h3 id="写屏障-卡表的维护技术"><a href="#写屏障-卡表的维护技术" class="headerlink" title="写屏障(卡表的维护技术)"></a>写屏障(卡表的维护技术)</h3><p>卡表元素如何维护？例如它们何时变脏、谁来把它们变脏等。</p>
+<p>HotSpot虚拟机里是通过写屏障（Write Barrier）技术维护卡表状态的。</p>
+<p>写屏障可以看作在虚拟机层面对“引用类型字段赋值”这个动作的AOP切面，在引用对象赋值时会产生一个环形通知，供程序执行额外的动作，也就是说赋值的前后都在写屏障的覆盖范畴内。在赋值前的部分的写屏障叫作写前屏障，在赋值后的则叫作写后屏障。</p>
+<p>应用写屏障后，虚拟机就会为所有赋值操作生成相应的指令，一旦收集器在写屏障中增加了更新卡表操作，无论更新的是不是老年代对新生代对象的引用，每次只要对引用进行更新，就会产生额外的开销，不过这个开销与Minor GC时扫描整个老年代的代价相比还是低得多的。</p>
+<p>卡表在高并发场景下还面临着“伪共享”（False Sharing）问题。伪共享是处理并发底层细节时一种经常需要考虑的问题，现代中央处理器的缓存系统中是以缓存行为单位存储的，当多线程修改互相独立的变量时，如果这些变量恰好共享同一个缓存行，就会彼此影响（写回、无效化或者同步）而导致性能降低，这就是伪共享问题。</p>
+<p>为了避免伪共享问题，一种简单的解决方案是不采用无条件的写屏障，而是先检查卡表标记，只有当该卡表元素未被标记过时才将其标记为变脏。</p>
+<p>在JDK 7之后，HotSpot虚拟机增加了一个新的参数-XX：+UseCondCardMark，用来决定是否开启卡表更新的条件判断。开启会增加一次额外判断的开销，但能够避免伪共享问题，两者各有性能损耗，是否打开要根据应用实际运行情况来进行测试权衡。</p>
+<h3 id="并发的可达性分析"><a href="#并发的可达性分析" class="headerlink" title="并发的可达性分析"></a>并发的可达性分析</h3><p>三色标记：</p>
+<p>白色：表示对象尚未被垃圾收集器访问过。</p>
+<p>灰色：表示对象已经被垃圾收集器访问过，切这个对象上至少有一个引用还没有被扫描过。</p>
+<p>黑色：表示对象已经被垃圾收集器访问过，且这个对象的所有引用都已经扫描过。</p>
+<p>过程：</p>
+<p>收集器在对象图上标记颜色，同时用户线程在修改引用关系(即修改对象图结构)，如果把原本存活的对象错误标记为已消亡，就会发生对象消失，导致程序出错。最后清理标记为白色的对象。</p>
+<blockquote>
+<p>把原本消亡的对象错误标记为存活，这不是好事，但其实是可以容忍的，只不过产生了一点逃过本次收集的浮动垃圾而已，下次收集清理掉就好。</p>
+</blockquote>
+<p>对象消失：</p>
+<p>Wilson于1994年在理论上证明了，当且仅当以下两个条件同时满足时，会产生“对象消失”的问题，即原本应该是黑色的对象被误标为白色：</p>
+<ul>
+<li><p>赋值器插入了一条或多条从黑色对象到白色对象的新引用</p>
+</li>
+<li><p>赋值器删除了全部从灰色对象到该白色对象的直接或间接引用</p>
+</li>
+</ul>
+<p>解决方案：</p>
+<ul>
+<li>增量更新 (Incremental Update)：当黑色对象插入新的指向白色对象的引用关系时，就将这个新插入的引用记录下来，等并发扫描结束之后，再将这些记录过的引用关系中的黑色对象为根，重新扫描一次。应用：CMS。</li>
+<li>原始快照 (Snap At The beginning, SATB)：当灰色对象要删除指向白色对象的引用关系时，就将这个要删除的引用记录下来，在并发扫描结束之后，再将这些记录过的引用关系中的灰色对象为根，重新扫描一次。应用：G1、Shenandoah</li>
+</ul>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://fatefrank.github.io/2020/07/13/02-hotspot-jvm-object/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Seif Zheng">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Seif Zheng's blog">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2020/07/13/02-hotspot-jvm-object/" class="post-title-link" itemprop="url">JVM 系列(二) - HotSpot 虚拟机</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-07-13 00:00:00" itemprop="dateCreated datePublished" datetime="2020-07-13T00:00:00+08:00">2020-07-13</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2020-08-04 15:55:10" itemprop="dateModified" datetime="2020-08-04T15:55:10+08:00">2020-08-04</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="HotSpot-虚拟机对象探秘"><a href="#HotSpot-虚拟机对象探秘" class="headerlink" title="HotSpot 虚拟机对象探秘"></a>HotSpot 虚拟机对象探秘</h1><h2 id="对象的内存布局"><a href="#对象的内存布局" class="headerlink" title="对象的内存布局"></a>对象的内存布局</h2><p>在 HotSpot 虚拟机中，对象的内存布局分为以下 3 块区域：</p>
+<ul>
+<li>对象头（Header）</li>
+<li>实例数据（Instance Data）</li>
+<li>对齐填充（Padding）</li>
+</ul>
+<p><img src="./images/object-memory-layout.png" alt="object-memory-layout.png"></p>
+<h3 id="对象头"><a href="#对象头" class="headerlink" title="对象头"></a>对象头</h3><p>Mark Word被设计成一个有着动态定义的数据结构，以便在极小的空间内存储尽量多的数据，根据对象的状态复用自己的存储空间。</p>
+<p>Mark Word的长度在32位和64位的虚拟机（未开启压缩指针）中分别为32个比特和64个比特。</p>
+<p>Mark Word记录了对象在运行过程中所需要使用的一些数据：</p>
+<ul>
+<li>哈希码</li>
+<li>GC 分代年龄</li>
+<li>锁状态标志</li>
+<li>线程持有的锁</li>
+<li>偏向线程 ID</li>
+<li>偏向时间戳</li>
+</ul>
+<p>对象头的另外一部分是类型指针，即对象指向它的类型元数据的指针，Java虚拟机通过这个指针来确定该对象是哪个类的实例。并不是所有的虚拟机实现都必须在对象数据上保留类型指针，换句话说，查找对象的元数据信息并不一定要经过对象本身。</p>
+<p>此外，如果对象是一个Java数组，那在对象头中还必须有一块用于记录数组长度的数据，因为虚拟机可以通过普通<br>Java对象的元数据信息确定Java对象的大小，但是如果数组的长度是不确定的，将无法通过元数据中的信息推断出数组的大小。</p>
+<h3 id="实例数据"><a href="#实例数据" class="headerlink" title="实例数据"></a>实例数据</h3><p>实例数据部分就是成员变量的值，其中包括父类成员变量和本类成员变量。</p>
+<p>这部分的存储顺序会受到虚拟机分配策略参数（-XX：FieldsAllocationStyle参数）和字段在Java源码中定义顺序的影响。</p>
+<h3 id="对齐填充"><a href="#对齐填充" class="headerlink" title="对齐填充"></a>对齐填充</h3><p>用于确保对象的总长度为 8 字节的整数倍。</p>
+<p>HotSpot VM 的自动内存管理系统要求对象的大小必须是 8 字节的整数倍。而对象头部分正好是 8 字节的倍数（1 倍或 2 倍），因此，当对象实例数据部分没有对齐时，就需要通过对齐填充来补全。</p>
+<blockquote>
+<p>对齐填充并不是必然存在，也没有特别的含义，它仅仅起着占位符的作用。</p>
+</blockquote>
+<h2 id="对象的创建过程"><a href="#对象的创建过程" class="headerlink" title="对象的创建过程"></a>对象的创建过程</h2><h3 id="类加载检查"><a href="#类加载检查" class="headerlink" title="类加载检查"></a>类加载检查</h3><p>虚拟机在解析<code>.class</code>文件时，若遇到一条 new 指令，首先它会去检查常量池中是否有这个类的符号引用，并且检查这个符号引用所代表的类是否已被加载、解析和初始化过。如果没有，那么必须先执行相应的类加载过程。</p>
+<h3 id="为新生对象分配内存"><a href="#为新生对象分配内存" class="headerlink" title="为新生对象分配内存"></a>为新生对象分配内存</h3><p>对象所需内存的大小在类加载完成后便可完全确定，接下来从堆中划分一块对应大小的内存空间给新的对象。分配堆中内存有两种方式：</p>
+<ul>
+<li><strong>指针碰撞</strong><br><br>如果 Java <strong>堆中内存绝对规整</strong>（说明采用的是“<strong>复制算法</strong>”或“<strong>标记整理法</strong>”），空闲内存和已使用内存中间放着一个指针作为分界点指示器，那么分配内存时只需要把指针向空闲内存挪动一段与对象大小一样的距离，这种分配方式称为“<strong>指针碰撞</strong>”。</li>
+<li><strong>空闲列表</strong><br><br>如果 Java <strong>堆中内存并不规整</strong>，已使用的内存和空闲内存交错（说明采用的是<strong>标记-清除法</strong>，有碎片），此时没法简单进行指针碰撞， VM 必须维护一个列表，记录其中哪些内存块空闲可用。分配之时从空闲列表中找到一块足够大的内存空间划分给对象实例。这种方式称为“<strong>空闲列表</strong>”。</li>
+</ul>
+<p>对象创建在虚拟机中是非常频繁的行为，在并发情况下也并不是线程安全的，有两种可选解决方案：</p>
+<ul>
+<li><p>对分配内存空间的动作进行同步处理——实际上虚拟机是采用CAS配上失败重试的方式保证更新操作的原子性。</p>
+</li>
+<li><p>把内存分配的动作按照线程划分在不同的空间之中进行，即每个线程在Java堆中预先分配一小块内存，称为本地线程分配缓冲（Thread Local Allocation Buffer，TLAB），哪个线程要分配内存，就在哪个线程的本地缓冲区中分配，只有本地缓冲区用完了，分配新的缓存区时才需要同步锁定。</p>
+<blockquote>
+<p>虚拟机是否使用TLAB，可以通过-XX：+/-UseTLAB参数来设定。</p>
+</blockquote>
+</li>
+</ul>
+<h3 id="初始化"><a href="#初始化" class="headerlink" title="初始化"></a>初始化</h3><p>分配完内存后，虚拟机必须将分配到的内存空间（但不包括对象头）都初始化为零值，如果使用了TLAB的话，这一项工作也可以提前至TLAB分配时顺便进行。</p>
+<blockquote>
+<p>这步操作保证了对象的实例字段在Java代码中可以不赋初始值就直接使用，使程序能访问到这些字段的数据类型所对应的零值。</p>
+</blockquote>
+<p>然后设置对象头信息。</p>
+<blockquote>
+<p>例如这个对象是哪个类的实例、如何才能找到类的元数据信息、对象的哈希码（实际上对象的哈希码会延后到真正调用Object::hashCode()方法时才计算）、对象的GC分代年龄等信息。这些信息存放在对象的对象头（Object Header）之中。根据虚拟机当前运行状态的不同，如是否启用偏向锁等，对象头会有不同的设置方式。</p>
+</blockquote>
+<p>最后调用对象的构造函数方法进行初始化，即Class文件中的<init>()方法。</p>
+<p>至此，整个对象的创建过程就完成了。</p>
+<h2 id="对象的访问方式"><a href="#对象的访问方式" class="headerlink" title="对象的访问方式"></a>对象的访问方式</h2><p>所有对象的存储空间都是在堆中分配的，但是这个对象的引用却是在堆栈中分配的。也就是说在建立一个对象时两个地方都分配内存，在堆中分配的内存实际建立这个对象，而在堆栈中分配的内存只是一个指向这个堆对象的指针（引用）而已。 那么根据引用存放的地址类型的不同，对象有不同的访问方式。</p>
+<h3 id="句柄访问方式"><a href="#句柄访问方式" class="headerlink" title="句柄访问方式"></a>句柄访问方式</h3><p>堆中需要有一块叫做“句柄池”的内存空间，句柄中包含了对象实例数据与类型数据各自的具体地址信息。</p>
+<p>引用类型的变量存放的是该对象的句柄地址（reference）。访问对象时，首先需要通过引用类型的变量找到该对象的句柄，然后根据句柄中对象的地址找到对象。</p>
+<p><img src="./images/handle-access.jpg" alt="handle-access"></p>
+<h3 id="直接指针访问方式"><a href="#直接指针访问方式" class="headerlink" title="直接指针访问方式"></a>直接指针访问方式</h3><p>引用类型的变量直接存放对象的地址，从而不需要句柄池，通过引用能够直接访问对象。但对象所在的内存空间需要额外的策略存储对象所属的类信息的地址。</p>
+<p><img src="./images/direct-pointer.jpg" alt="direct-pointer"></p>
+<p>需要说明的是，HotSpot 采用第二种方式，即直接指针方式来访问对象，只需要一次寻址操作，所以在性能上比句柄访问方式快一倍。但像上面所说，它需要<strong>额外的策略</strong>来存储对象在方法区中类信息的地址。</p>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
     <link itemprop="mainEntityOfPage" href="http://fatefrank.github.io/2020/07/12/01-jvm-memory-structure/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -334,553 +957,10 @@
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="http://fatefrank.github.io/2020/07/06/redis%E7%9A%84%E5%AE%89%E8%A3%85%E4%B8%8E%E4%BD%BF%E7%94%A8/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Seif Zheng">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Seif Zheng's blog">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2020/07/06/redis%E7%9A%84%E5%AE%89%E8%A3%85%E4%B8%8E%E4%BD%BF%E7%94%A8/" class="post-title-link" itemprop="url">redis的安装与使用</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-07-06 00:00:00" itemprop="dateCreated datePublished" datetime="2020-07-06T00:00:00+08:00">2020-07-06</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-08-04 15:49:28" itemprop="dateModified" datetime="2020-08-04T15:49:28+08:00">2020-08-04</time>
-              </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h2 id="redis"><a href="#redis" class="headerlink" title="redis"></a>redis</h2><h3 id="redis的安装和配置"><a href="#redis的安装和配置" class="headerlink" title="redis的安装和配置"></a>redis的安装和配置</h3><ol>
-<li><p>到官方网站下载最新稳定版的redis压缩包</p>
-</li>
-<li><p>上传到/home/software</p>
-</li>
-<li><p>解压redis压缩包</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">tar -zxvf  redis-5.0.8.tar.gz</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>下载 gcc依赖</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">yum install gcc-c++</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>编译</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">make</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>安装</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">make install</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>将redis的启动脚本拷贝出来</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">cp &#x2F;home&#x2F;software&#x2F;redis-5.0.8&#x2F;utils&#x2F;redis_init_script &#x2F;etc&#x2F;init.d</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>创建redis目录</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">mkdir &#x2F;usr&#x2F;local&#x2F;redis -p</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>redis配置文件拷贝到redis目录下</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">cp &#x2F;home&#x2F;software&#x2F;redis-5.0.8&#x2F;redis.conf &#x2F;usr&#x2F;local&#x2F;redis</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>编辑redis.conf文件</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash">后台运行redis</span></span><br><span class="line">daemonize yes    </span><br><span class="line">...</span><br><span class="line"><span class="meta">#</span><span class="bash">指定redis的工作空间，记得创建working</span></span><br><span class="line">dir /usr/local/redis/working    </span><br><span class="line">...</span><br><span class="line"><span class="meta">#</span><span class="bash">使redis能允许外部访问</span></span><br><span class="line">bind 0.0.0.0</span><br><span class="line">...</span><br><span class="line"><span class="meta">#</span><span class="bash">设置redis的密码</span></span><br><span class="line">requirepass 123456</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>修改redis启动脚本文件 /etc/init.d/redis_init_script </p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> REDISPORT 和 PIDFILE 如果要修改，要与redis.conf文件对应</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 指定redis配置文件的位置</span></span><br><span class="line">CONF=&quot;/usr/local/redis/redis.conf&quot;</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 赋予stop指令密码</span></span><br><span class="line"><span class="meta">$</span><span class="bash">CLIEXEC -a <span class="string">&quot;123456&quot;</span> -p <span class="variable">$REDISPORT</span> shutdown</span></span><br></pre></td></tr></table></figure>
-</li>
-<li><p>给redis启动脚本文件加上权限</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">chmod 777 &#x2F;etc&#x2F;init.d&#x2F;redis_init_script  </span><br></pre></td></tr></table></figure>
-</li>
-<li><p>启动redis，关闭redis</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">./redis_init_script start</span><br><span class="line">./redis_init_script stop            # 需要在redis_init_script中配置密码</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>配置redis开机自启动，编辑/etc/init.d/redis_init_script ，加上</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">#chkconfig: 22345 10 90 </span><br><span class="line">#description: Start and Stop redis</span><br></pre></td></tr></table></figure>
-
-<p>再将脚本注册到开机字启动</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">chkconfig redis_init_script on</span><br></pre></td></tr></table></figure>
-
-
-
-</li>
-</ol>
-<h3 id="redis的常用客户端命令"><a href="#redis的常用客户端命令" class="headerlink" title="redis的常用客户端命令"></a>redis的常用客户端命令</h3><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 进入命令行</span></span><br><span class="line">redis-cli</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 通过密码赋予权限</span></span><br><span class="line">auth 123456</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 切换数据库，默认16个</span></span><br><span class="line">select 4</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 清空当前数据库</span></span><br><span class="line">flushdb</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 清空所有数据库</span></span><br><span class="line">flushall</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 存入或更新string类型数据 </span></span><br><span class="line">set name imooc</span><br><span class="line">set age 18</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 存入string类型数据, 不更新</span></span><br><span class="line">setnx age 20</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 根据key查询</span></span><br><span class="line">get name</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 删除指定key</span></span><br><span class="line">del name</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 获取key集合，不推荐</span></span><br><span class="line">keys *</span><br><span class="line">keys a*</span><br><span class="line">keys *e</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 获取key所对应的value的类型</span></span><br><span class="line">type age </span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 获取指定key的剩余有效时间，-1代表永久有效；-2代表key不存在，或已失效</span></span><br><span class="line">ttl age</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 设置age的剩余有效时间为30s</span></span><br><span class="line">expire age 30</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 存入vip并设置有效时间为20s</span></span><br><span class="line">set vip yes ex 20</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 为name所对应的值后面加上123</span></span><br><span class="line">append name 123</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 查询name的长度</span></span><br><span class="line">strlen name</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> age的值加1, 注意如果对name使用会报错，下同</span></span><br><span class="line">incr age</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> age的值减1</span></span><br><span class="line">decr age</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> age的值加5</span></span><br><span class="line">incrby age 5</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> age的值减5</span></span><br><span class="line">decrby age 5</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 截取name的值, 左闭右闭，-1代表无穷大</span></span><br><span class="line">getrange name 0 -1</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 从指定位置开始更新name</span></span><br><span class="line">setrange name 1 abc</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 统一多个存入或更新</span></span><br><span class="line">mset k1 aa k2 bb</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 统一多个存入，一个失败全失败</span></span><br><span class="line">msetnx k2 bbb k3 cc</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 统一多个查询</span></span><br><span class="line">mget k1 k2</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash">redis中的<span class="built_in">hash</span>数据类型，相当于键值对集合</span></span><br><span class="line">user &#123;</span><br><span class="line">    name:imooc</span><br><span class="line">    age:18</span><br><span class="line">    sex:man</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 存入<span class="built_in">hash</span>类型数据user，有一个属性为name，值为imooc</span></span><br><span class="line">hset user name imooc</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 获取user的name属性值</span></span><br><span class="line">hget user name</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 同时设置多个user的属性</span></span><br><span class="line">hmset user age 18 sex man</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 同时获取多个user的属性</span></span><br><span class="line">hmget user age sex name</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 获取user的所有属性名和属性值</span></span><br><span class="line">hgetall user</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 获取user的属性个数</span></span><br><span class="line">hlen user</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 获取user的属性名集合</span></span><br><span class="line">hkeys user</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 获取user的属性值集合</span></span><br><span class="line">hvals user</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> user的age属性加5</span></span><br><span class="line">hincrby user age 5</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> user的age属性加2.2</span></span><br><span class="line">hincrbyfloat age 2.2</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 判断user的name属性是否存在</span></span><br><span class="line">hexist user name</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 删除user的name属性，无法直接删除user，要一个个属性删完</span></span><br><span class="line">hdel user name</span><br></pre></td></tr></table></figure>
-
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash">redis中的list数据类型，相当于双端队列</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 从左进队</span></span><br><span class="line">lpush list1 pig cow sheep chicken duck</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 从右进队</span></span><br><span class="line">rpush list2 pig cow sheep chicken duck</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 根据索引从左往右获取值</span></span><br><span class="line">lrange list1 0 -1</span><br><span class="line">lrange list2 0 -1</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 从左出队一个</span></span><br><span class="line">lpop list1</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 从右出队一个</span></span><br><span class="line">rpop list1</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 获取队列长度</span></span><br><span class="line">llen list1</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 根据索引获取队列中的值</span></span><br><span class="line">lindex list1 2</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 根据索引更新队列中的值</span></span><br><span class="line">lset list1 1 1001</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 往队列list1中的1001前插入aaa</span></span><br><span class="line">linsert list1 before 1001 aaa</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 往队列list1中的1001后插入aaa</span></span><br><span class="line">linsert list1 after 1001 aaa</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 在队列list1中删除2个aaa</span></span><br><span class="line">lrem list1 2 aaa</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 根据索引截取list1，作为新队列</span></span><br><span class="line">ltrim list1 1 2</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 删除队列list1</span></span><br><span class="line">del list1</span><br></pre></td></tr></table></figure>
-
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> redis中的<span class="built_in">set</span>数据类型，相当于数学中的集合</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 设置set1，重复的元素添加无效</span></span><br><span class="line">sadd set1 duck pig cow sheep sheep sheep pig</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 获取set1的所有元素</span></span><br><span class="line">smembers set1</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> set1的元素个数</span></span><br><span class="line">scard set1</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 判断pig是否为set1的元素</span></span><br><span class="line">sismember set1 pig</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 删除set1的duck元素</span></span><br><span class="line">srem set1 duck</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 从set1中随机弹出1个元素</span></span><br><span class="line">spop set1</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 从set1中随机弹出2个元素</span></span><br><span class="line">spop set1 2</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 随机获取set1的3个元素</span></span><br><span class="line">srandmember set1 3</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 将set1的cow元素移动到set2</span></span><br><span class="line">smove set1 set2 cow</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 求set1和set2的差集，set1有，set2没有</span></span><br><span class="line">sdiff set1 set2  </span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 求set1和set2的交集</span></span><br><span class="line">sinter set1 set2</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 求set1和set2的并集</span></span><br><span class="line">sunion set1 set2</span><br></pre></td></tr></table></figure>
-
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> redis的zset数据类型相当于有序集合sorted <span class="built_in">set</span></span></span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 设置zset1,包含权重</span></span><br><span class="line">zadd zset1 10 duck 20 pig 30 chicken 40 beef 50 sheep</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 二次添加zset1，会根据score自动排序，重复的元素更新score无效</span></span><br><span class="line">zadd zset1 25 bird 35 dog</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 根据索引范围获取zset元素，-1代表无穷大 </span></span><br><span class="line">zrange zset1 0 -1</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 根据索引范围获取zset元素加score，-1代表无穷大 </span></span><br><span class="line">zrange zset1 0 -1 withscores</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 获取20&lt;=score&lt;=40的元素(附带score)</span></span><br><span class="line">zrangebyscore zset1 20 40 withscores</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 获取20&lt;score&lt;40的元素(附带score)</span></span><br><span class="line">zrangebyscore zset1 (20 (40 withscores</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 获取20&lt;=score&lt;=40的元素(附带score)，再从中根据索引(<span class="built_in">limit</span> offset count)筛选</span></span><br><span class="line">zrangebyscore zset1 20 40 withscores limit 1 2</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 获取zset1中beef的索引</span></span><br><span class="line">zrank zset1 beef</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 获取zset1中beef的分数</span></span><br><span class="line">zscore zset1 beef</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 获取zset1的元素个数</span></span><br><span class="line">zcard zset1 </span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 获取20&lt;=score&lt;=40的元素个数</span></span><br><span class="line">zcount zset1 20 40</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 删除zset1中的pig，sheep元素</span></span><br><span class="line">zrem zset1 pig sheep</span><br></pre></td></tr></table></figure>
-
-
-
-<h3 id="redis整合进SpringBoot"><a href="#redis整合进SpringBoot" class="headerlink" title="redis整合进SpringBoot"></a>redis整合进SpringBoot</h3><figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># application-*.yml文件</span></span><br><span class="line"></span><br><span class="line"><span class="attr">spring:</span></span><br><span class="line">  <span class="attr">redis:</span></span><br><span class="line">    <span class="attr">database:</span> <span class="number">1</span></span><br><span class="line">    <span class="attr">host:</span> <span class="number">192.168</span><span class="number">.200</span><span class="number">.201</span></span><br><span class="line">    <span class="attr">port:</span> <span class="number">6379</span></span><br><span class="line">    <span class="attr">password:</span> <span class="number">123456</span>    </span><br></pre></td></tr></table></figure>
-
-<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!-- 引入redis依赖 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.springframework.boot<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>spring-boot-starter-data-redis<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
-
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.imooc.controller;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> com.imooc.utils.RedisOperator;</span><br><span class="line"><span class="keyword">import</span> org.springframework.beans.factory.annotation.Autowired;</span><br><span class="line"><span class="keyword">import</span> org.springframework.web.bind.annotation.GetMapping;</span><br><span class="line"><span class="keyword">import</span> org.springframework.web.bind.annotation.RequestMapping;</span><br><span class="line"><span class="keyword">import</span> org.springframework.web.bind.annotation.RestController;</span><br><span class="line"><span class="keyword">import</span> springfox.documentation.annotations.ApiIgnore;</span><br><span class="line"></span><br><span class="line"><span class="meta">@ApiIgnore</span></span><br><span class="line"><span class="meta">@RestController</span></span><br><span class="line"><span class="meta">@RequestMapping(&quot;/redis&quot;)</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">RedisController</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> RedisOperator redisOperator;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@GetMapping(&quot;/set&quot;)</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Object <span class="title">set</span><span class="params">(String key, String value)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">        redisOperator.set(key, value);</span><br><span class="line">        <span class="keyword">return</span> <span class="string">&quot;OK&quot;</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@GetMapping(&quot;/get&quot;)</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Object <span class="title">get</span><span class="params">(String key)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> redisOperator.get(key);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@GetMapping(&quot;/delete&quot;)</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Object <span class="title">delete</span><span class="params">(String key)</span> </span>&#123;</span><br><span class="line">        redisOperator.del(key);</span><br><span class="line">        <span class="keyword">return</span> <span class="string">&quot;OK&quot;</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-
-
-<h3 id="redis的发布和订阅"><a href="#redis的发布和订阅" class="headerlink" title="redis的发布和订阅"></a>redis的发布和订阅</h3><p>不重要的功能，有消息队列替代，参考<a target="_blank" rel="noopener" href="http://redisdoc.com/pubsub/index.html">http://redisdoc.com/pubsub/index.html</a></p>
-<h3 id="redis的持久化机制"><a href="#redis的持久化机制" class="headerlink" title="redis的持久化机制"></a>redis的持久化机制</h3><p>Redis 提供了多种不同级别的持久化方式：</p>
-<ul>
-<li>RDB 持久化可以在指定的时间间隔内生成数据集的时间点快照（point-in-time snapshot）。</li>
-<li>AOF 持久化记录服务器执行的所有写操作命令，并在服务器启动时，通过重新执行这些命令来还原数据集。 AOF 文件中的命令全部以 Redis 协议的格式来保存，新命令会被追加到文件的末尾。 Redis 还可以在后台对 AOF 文件进行重写（rewrite），使得 AOF 文件的体积不会超出保存数据集状态所需的实际大小。</li>
-<li>Redis 还可以同时使用 AOF 持久化和 RDB 持久化。 在这种情况下， 当 Redis 重启时， 它会优先使用 AOF 文件来还原数据集， 因为 AOF 文件保存的数据集通常比 RDB 文件所保存的数据集更完整。</li>
-<li>你甚至可以关闭持久化功能，让数据只在服务器运行时存在。</li>
-</ul>
-<p>了解 RDB 持久化和 AOF 持久化之间的异同是非常重要的， 以下几个小节将详细地介绍这这两种持久化功能， 并对它们的相同和不同之处进行</p>
-<h4 id="RDB-的优点"><a href="#RDB-的优点" class="headerlink" title="RDB 的优点"></a>RDB 的优点</h4><ul>
-<li>RDB 是一个非常紧凑（compact）的文件，它保存了 Redis 在某个时间点上的数据集。 这种文件非常适合用于进行备份： 比如说，你可以在最近的 24 小时内，每小时备份一次 RDB 文件，并且在每个月的每一天，也备份一个 RDB 文件。 这样的话，即使遇上问题，也可以随时将数据集还原到不同的版本。</li>
-<li>RDB 非常适用于灾难恢复（disaster recovery）：它只有一个文件，并且内容都非常紧凑，可以（在加密后）将它传送到别的数据中心，或者亚马逊 S3 中。</li>
-<li>RDB 可以最大化 Redis 的性能：父进程在保存 RDB 文件时唯一要做的就是 <code>fork</code> 出一个子进程，然后这个子进程就会处理接下来的所有保存工作，父进程无须执行任何磁盘 I/O 操作。</li>
-<li>RDB 在恢复大数据集时的速度比 AOF 的恢复速度要快。</li>
-</ul>
-<h4 id="RDB-的缺点"><a href="#RDB-的缺点" class="headerlink" title="RDB 的缺点"></a>RDB 的缺点</h4><ul>
-<li>如果你需要尽量避免在服务器故障时丢失数据，那么 RDB 不适合你。 虽然 Redis 允许你设置不同的保存点（save point）来控制保存 RDB 文件的频率， 但是， 因为<u>RDB 文件需要保存整个数据集的状态</u>， 所以它并不是一个轻松的操作。 因此你可能会至少 5 分钟才保存一次 RDB 文件。 在这种情况下， 一旦发生故障停机， 你就可能会丢失好几分钟的数据。</li>
-<li>每次保存 RDB 的时候，Redis 都要 <code>fork()</code> 出一个子进程，并由子进程来进行实际的持久化工作。 在数据集比较庞大时， <code>fork()</code> 可能会非常耗时，造成服务器在某某毫秒内停止处理客户端； 如果数据集非常巨大，并且 CPU 时间非常紧张的话，那么这种停止时间甚至可能会长达整整一秒。 虽然 AOF 重写也需要进行 <code>fork()</code> ，但无论 AOF 重写的执行间隔有多长，数据的耐久性都不会有任何损失。</li>
-</ul>
-<h4 id="AOF-的优点"><a href="#AOF-的优点" class="headerlink" title="AOF 的优点"></a>AOF 的优点</h4><ul>
-<li>使用 AOF 持久化会让 Redis 变得非常耐久（much more durable）：你可以设置不同的 <code>fsync</code> 策略，比如无 <code>fsync</code> ，每秒钟一次 <code>fsync</code> ，或者每次执行写入命令时 <code>fsync</code> 。 AOF 的默认策略为每秒钟 <code>fsync</code> 一次，在这种配置下，Redis 仍然可以保持良好的性能，并且就算发生故障停机，也最多只会丢失一秒钟的数据（ <code>fsync</code> 会在后台线程执行，所以主线程可以继续努力地处理命令请求）。</li>
-<li>AOF 文件是一个只进行追加操作的日志文件（append only log）， 因此对 AOF 文件的写入不需要进行 <code>seek</code> ， 即使日志因为某些原因而包含了未写入完整的命令（比如写入时磁盘已满，写入中途停机，等等）， <code>redis-check-aof</code> 工具也可以轻易地修复这种问题。</li>
-<li>Redis 可以在 AOF 文件体积变得过大时，自动地在后台对 AOF 进行重写： 重写后的新 AOF 文件包含了恢复当前数据集所需的最小命令集合。 <u>整个重写操作是绝对安全的</u>，因为 Redis 在创建新 AOF 文件的过程中，会继续将命令追加到现有的 AOF 文件里面，即使重写过程中发生停机，现有的 AOF 文件也不会丢失。 而一旦新 AOF 文件创建完毕，Redis 就会从旧 AOF 文件切换到新 AOF 文件，并开始对新 AOF 文件进行追加操作。</li>
-<li>AOF 文件有序地保存了对数据库执行的所有写入操作， 这些写入操作<u>以 Redis 协议的格式保存</u>， 因此 AOF 文件的内容非常容易被人读懂， 对文件进行分析（parse）也很轻松。 导出（export） AOF 文件也非常简单： 举个例子， 如果你不小心执行了 <a target="_blank" rel="noopener" href="http://redisdoc.com/database/flushall.html#flushall">FLUSHALL</a> 命令， 但只要 AOF 文件未被重写， 那么只要停止服务器， 移除 AOF 文件末尾的 <a target="_blank" rel="noopener" href="http://redisdoc.com/database/flushall.html#flushall">FLUSHALL</a> 命令， 并重启 Redis ， 就可以将数据集恢复到 <a target="_blank" rel="noopener" href="http://redisdoc.com/database/flushall.html#flushall">FLUSHALL</a> 执行之前的状态。</li>
-</ul>
-<h4 id="AOF-的缺点"><a href="#AOF-的缺点" class="headerlink" title="AOF 的缺点"></a>AOF 的缺点</h4><ul>
-<li>对于相同的数据集来说，AOF 文件的体积通常要大于 RDB 文件的体积。</li>
-<li>根据所使用的 <code>fsync</code> 策略，AOF 的速度可能会慢于 RDB 。 在一般情况下， 每秒 <code>fsync</code> 的性能依然非常高， 而关闭 <code>fsync</code> 可以让 AOF 的速度和 RDB 一样快， 即使在高负荷之下也是如此。 不过在处理巨大的写入载入时，RDB 可以提供更有保证的最大延迟时间（latency）。</li>
-<li>AOF 在过去曾经发生过这样的 bug ： 因为个别命令的原因，导致 AOF 文件在重新载入时，无法将数据集恢复成保存时的原样。 （举个例子，阻塞命令 <a target="_blank" rel="noopener" href="http://redisdoc.com/list/brpoplpush.html#brpoplpush">BRPOPLPUSH source destination timeout</a> 就曾经引起过这样的 bug 。） 测试套件里为这种情况添加了测试： 它们会自动生成随机的、复杂的数据集， 并通过重新载入这些数据来确保一切正常。 虽然这种 bug 在 AOF 文件中并不常见， 但是对比来说， RDB 几乎是不可能出现这种 bug 的。</li>
-</ul>
-<h4 id="RDB-和-AOF-，我应该用哪一个？"><a href="#RDB-和-AOF-，我应该用哪一个？" class="headerlink" title="RDB 和 AOF ，我应该用哪一个？"></a>RDB 和 AOF ，我应该用哪一个？</h4><p>一般来说， 如果想达到足以媲美 PostgreSQL 的数据安全性， 你应该同时使用两种持久化功能。</p>
-<p>如果你非常关心你的数据， 但仍然可以承受数分钟以内的数据丢失， 那么你可以只使用 RDB 持久化。</p>
-<p>有很多用户都只使用 AOF 持久化， 但我们并不推荐这种方式： 因为定时生成 RDB 快照（snapshot）非常便于进行数据库备份， 并且 RDB 恢复数据集的速度也要比 AOF 恢复的速度要快， 除此之外， 使用 RDB 还可以避免之前提到的 AOF 程序的 bug 。</p>
-<h4 id="快照的运作方式"><a href="#快照的运作方式" class="headerlink" title="快照的运作方式"></a>快照的运作方式</h4><p>当 Redis 需要保存 <code>dump.rdb</code> 文件时， 服务器执行以下操作：</p>
-<ol>
-<li>Redis 调用 <code>fork()</code> ，同时拥有父进程和子进程。</li>
-<li>子进程将数据集写入到一个临时 RDB 文件中。</li>
-<li>当子进程完成对新 RDB 文件的写入时，Redis 用新 RDB 文件替换原来的 RDB 文件，并删除旧的 RDB 文件。</li>
-</ol>
-<p>这种工作方式使得 Redis 可以从<u>写时复制（copy-on-write）机制</u>中获益。</p>
-<h4 id="只进行追加操作的文件（append-only-file，AOF）"><a href="#只进行追加操作的文件（append-only-file，AOF）" class="headerlink" title="只进行追加操作的文件（append-only file，AOF）"></a>只进行追加操作的文件（append-only file，AOF）</h4><p>快照功能并不是非常耐久（durable）： 如果 Redis 因为某些原因而造成故障停机， 那么服务器将丢失最近写入、且仍未保存到快照中的那些数据。</p>
-<p>尽管对于某些程序来说， 数据的耐久性并不是最重要的考虑因素， 但是对于那些追求完全耐久能力（full durability）的程序来说， 快照功能就不太适用了。</p>
-<p>从 1.1 版本开始， Redis 增加了一种完全耐久的持久化方式： AOF 持久化。</p>
-<p>你可以通过修改配置文件来打开 AOF 功能：</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">appendonly yes</span><br></pre></td></tr></table></figure>
-
-<p>从现在开始， 每当 Redis 执行一个改变数据集的命令时（比如 [SET key value <a target="_blank" rel="noopener" href="http://redisdoc.com/string/set.html#set">EX seconds] [PX milliseconds] [NX|XX]</a>）， 这个命令就会被追加到 AOF 文件的末尾。</p>
-<p>这样的话， 当 Redis 重新启时， 程序就可以通过重新执行 AOF 文件中的命令来达到重建数据集的目的。</p>
-<h4 id="AOF-重写"><a href="#AOF-重写" class="headerlink" title="AOF 重写"></a>AOF 重写</h4><p>因为 AOF 的运作方式是不断地将命令追加到文件的末尾， 所以随着写入命令的不断增加， AOF 文件的体积也会变得越来越大。</p>
-<p>举个例子， 如果你对一个计数器调用了 100 次 <a target="_blank" rel="noopener" href="http://redisdoc.com/string/incr.html#incr">INCR key</a> ， 那么仅仅是为了保存这个计数器的当前值， AOF 文件就需要使用 100 条记录（entry）。</p>
-<p>然而在实际上， 只使用一条 [SET key value <a target="_blank" rel="noopener" href="http://redisdoc.com/string/set.html#set">EX seconds] [PX milliseconds] [NX|XX]</a> 命令已经足以保存计数器的当前值了， 其余 99 条记录实际上都是多余的。</p>
-<p>为了处理这种情况， Redis 支持一种有趣的特性： 可以在不打断服务客户端的情况下， 对 AOF 文件进行重建（rebuild）。</p>
-<p>执行 <a target="_blank" rel="noopener" href="http://redisdoc.com/persistence/bgrewriteaof.html#bgrewriteaof">BGREWRITEAOF</a> 命令， Redis 将生成一个新的 AOF 文件， 这个文件包含重建当前数据集所需的最少命令。</p>
-<p>Redis 2.2 需要自己手动执行 <a target="_blank" rel="noopener" href="http://redisdoc.com/persistence/bgrewriteaof.html#bgrewriteaof">BGREWRITEAOF</a> 命令； Redis 2.4 则可以自动触发 AOF 重写， 具体信息请查看 2.4 的示例配置文件。</p>
-<h4 id="AOF-的耐久性如何？"><a href="#AOF-的耐久性如何？" class="headerlink" title="AOF 的耐久性如何？"></a>AOF 的耐久性如何？</h4><p>你可以配置 Redis 多久才将数据 <code>fsync</code> 到磁盘一次。</p>
-<p>有三个选项：</p>
-<ul>
-<li>每次有新命令追加到 AOF 文件时就执行一次 <code>fsync</code> ：非常慢，也非常安全。</li>
-<li>每秒 <code>fsync</code> 一次：足够快（和使用 RDB 持久化差不多），并且在故障时只会丢失 1 秒钟的数据。</li>
-<li>从不 <code>fsync</code> ：将数据交给操作系统来处理。更快，也更不安全的选择。</li>
-</ul>
-<p>推荐（并且也是默认）的措施为每秒 <code>fsync</code> 一次， 这种 <code>fsync</code> 策略可以兼顾速度和安全性。</p>
-<p>总是 <code>fsync</code> 的策略在实际使用中非常慢， 即使在 Redis 2.0 对相关的程序进行了改进之后仍是如此 —— 频繁调用 <code>fsync</code> 注定了这种策略不可能快得起来。</p>
-<h4 id="如果-AOF-文件出错了，怎么办？"><a href="#如果-AOF-文件出错了，怎么办？" class="headerlink" title="如果 AOF 文件出错了，怎么办？"></a>如果 AOF 文件出错了，怎么办？</h4><p>服务器可能在程序正在对 AOF 文件进行写入时停机， 如果停机造成了 AOF 文件出错（corrupt）， 那么 Redis 在重启时会拒绝载入这个 AOF 文件， 从而确保数据的一致性不会被破坏。</p>
-<p>当发生这种情况时， 可以用以下方法来修复出错的 AOF 文件：</p>
-<ol>
-<li>为现有的 AOF 文件创建一个备份。</li>
-<li>使用 Redis 附带的 <code>redis-check-aof</code> 程序，对原来的 AOF 文件进行修复。</li>
-</ol>
-<blockquote>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> redis-check-aof --fix</span></span><br></pre></td></tr></table></figure>
-</blockquote>
-<ol start="3">
-<li><p>（可选）使用 <code>diff -u</code> 对比修复后的 AOF 文件和原始 AOF 文件的备份，查看两个文件之间的不同之处。</p>
-</li>
-<li><p>重启 Redis 服务器，等待服务器载入修复后的 AOF 文件，并进行数据恢复。</p>
-</li>
-</ol>
-<h4 id="AOF-的运作方式"><a href="#AOF-的运作方式" class="headerlink" title="AOF 的运作方式"></a>AOF 的运作方式</h4><p>AOF 重写和 RDB 创建快照一样，都巧妙地利用了写时复制机制。</p>
-<p>以下是 AOF 重写的执行步骤：</p>
-<ol>
-<li>Redis 执行 <code>fork()</code> ，现在同时拥有父进程和子进程。</li>
-<li>子进程开始将新 AOF 文件的内容写入到临时文件。</li>
-<li>对于所有新执行的写入命令，父进程一边将它们累积到一个内存缓存中，一边将这些改动追加到现有 AOF 文件的末尾： 这样即使在重写的中途发生停机，现有的 AOF 文件也还是安全的。</li>
-<li>当子进程完成重写工作时，它给父进程发送一个信号，父进程在接收到信号之后，将内存缓存中的所有数据追加到新 AOF 文件的末尾。</li>
-<li>搞定！现在 Redis 原子地用新文件替换旧文件，之后所有命令都会直接追加到新 AOF 文件的末尾。</li>
-</ol>
-<h4 id="怎么从-RDB-持久化切换到-AOF-持久化"><a href="#怎么从-RDB-持久化切换到-AOF-持久化" class="headerlink" title="怎么从 RDB 持久化切换到 AOF 持久化"></a>怎么从 RDB 持久化切换到 AOF 持久化</h4><p>在 Redis 2.2 或以上版本，可以在不重启的情况下，从 RDB 切换到 AOF ：</p>
-<ol>
-<li>为最新的 <code>dump.rdb</code> 文件创建一个备份。</li>
-<li>将备份放到一个安全的地方。</li>
-<li>执行以下两条命令：</li>
-</ol>
-<blockquote>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">redis-cli&gt;</span><span class="bash"> CONFIG SET appendonly yes</span></span><br><span class="line"><span class="meta">redis-cli&gt;</span><span class="bash"> CONFIG SET save <span class="string">&quot;&quot;</span></span></span><br></pre></td></tr></table></figure>
-</blockquote>
-<ol start="4">
-<li><p>确保命令执行之后，数据库的键的数量没有改变。</p>
-</li>
-<li><p>确保写命令会被正确地追加到 AOF 文件的末尾。</p>
-</li>
-</ol>
-<p>步骤 3 执行的第一条命令开启了 AOF 功能： Redis 会阻塞直到初始 AOF 文件创建完成为止， 之后 Redis 会继续处理命令请求， 并开始将写入命令追加到 AOF 文件末尾。</p>
-<p>步骤 3 执行的第二条命令用于关闭 RDB 功能。 这一步是可选的， 如果你愿意的话， 也可以同时使用 RDB 和 AOF 这两种持久化功能。</p>
-<h4 id="RDB-和-AOF-之间的相互作用"><a href="#RDB-和-AOF-之间的相互作用" class="headerlink" title="RDB 和 AOF 之间的相互作用"></a>RDB 和 AOF 之间的相互作用</h4><p>在版本号大于等于 2.4 的 Redis 中， <a target="_blank" rel="noopener" href="http://redisdoc.com/persistence/bgsave.html#bgsave">BGSAVE</a> 执行的过程中， 不可以执行 <a target="_blank" rel="noopener" href="http://redisdoc.com/persistence/bgrewriteaof.html#bgrewriteaof">BGREWRITEAOF</a> 。 反过来说， 在 <a target="_blank" rel="noopener" href="http://redisdoc.com/persistence/bgrewriteaof.html#bgrewriteaof">BGREWRITEAOF</a> 执行的过程中， 也不可以执行 <a target="_blank" rel="noopener" href="http://redisdoc.com/persistence/bgsave.html#bgsave">BGSAVE</a> 。</p>
-<p>这可以防止两个 Redis 后台进程同时对磁盘进行大量的 I/O 操作。</p>
-<p>如果 <a target="_blank" rel="noopener" href="http://redisdoc.com/persistence/bgsave.html#bgsave">BGSAVE</a> 正在执行， 并且用户显示地调用 <a target="_blank" rel="noopener" href="http://redisdoc.com/persistence/bgrewriteaof.html#bgrewriteaof">BGREWRITEAOF</a> 命令， 那么服务器将向用户回复一个 <code>OK</code> 状态， 并告知用户， <a target="_blank" rel="noopener" href="http://redisdoc.com/persistence/bgrewriteaof.html#bgrewriteaof">BGREWRITEAOF</a> 已经被预定执行： 一旦 <a target="_blank" rel="noopener" href="http://redisdoc.com/persistence/bgsave.html#bgsave">BGSAVE</a> 执行完毕， <a target="_blank" rel="noopener" href="http://redisdoc.com/persistence/bgrewriteaof.html#bgrewriteaof">BGREWRITEAOF</a> 就会正式开始。</p>
-<p>当 Redis 启动时， 如果 RDB 持久化和 AOF 持久化都被打开了， 那么程序会优先使用 AOF 文件来恢复数据集， 因为 AOF 文件所保存的数据通常是最完整的。</p>
-<p>备注：</p>
-<p><a target="_blank" rel="noopener" href="http://redisdoc.com/persistence/bgsave.html#bgsave">BGSAVE</a> ：在后台异步(Asynchronously)保存当前数据库的数据到磁盘。</p>
-<p><a target="_blank" rel="noopener" href="http://redisdoc.com/persistence/bgrewriteaof.html#bgrewriteaof">BGREWRITEAOF</a> ：执行一个 <a target="_blank" rel="noopener" href="http://redis.io/topics/persistence#append-only-file">AOF文件</a> 重写操作。重写会创建一个当前 AOF 文件的体积优化版本。</p>
-<h4 id="备份-Redis-数据"><a href="#备份-Redis-数据" class="headerlink" title="备份 Redis 数据"></a>备份 Redis 数据</h4><p>在阅读这个小节前， 先将下面这句话铭记于心： 一定要备份你的数据库！</p>
-<p>磁盘故障， 节点失效， 诸如此类的问题都可能让你的数据消失不见， 不进行备份是非常危险的。</p>
-<p>Redis 对于数据备份是非常友好的， 因为你可以在服务器运行的时候对 RDB 文件进行复制： RDB 文件一旦被创建， 就不会进行任何修改。 当服务器要创建一个新的 RDB 文件时， 它先将文件的内容保存在一个临时文件里面， 当临时文件写入完毕时， 程序才使用 <code>rename(2)</code> 原子地用临时文件替换原来的 RDB 文件。</p>
-<p>这也就是说， 无论何时， 复制 RDB 文件都是绝对安全的。</p>
-<p>以下是我们的建议：</p>
-<ul>
-<li>创建一个定期任务（cron job）， 每小时将一个 RDB 文件备份到一个文件夹， 并且每天将一个 RDB 文件备份到另一个文件夹。</li>
-<li>确保快照的备份都带有相应的日期和时间信息， 每次执行定期任务脚本时， 使用 <code>find</code> 命令来删除过期的快照： 比如说， 你可以保留最近 48 小时内的每小时快照， 还可以保留最近一两个月的每日快照。</li>
-<li>至少每天一次， 将 RDB 备份到你的数据中心之外， 或者至少是备份到你运行 Redis 服务器的物理机器之外。</li>
-</ul>
-<h4 id="容灾备份"><a href="#容灾备份" class="headerlink" title="容灾备份"></a>容灾备份</h4><p>Redis 的容灾备份基本上就是对数据进行备份， 并将这些备份传送到多个不同的外部数据中心。</p>
-<p>容灾备份可以在 Redis 运行并产生快照的主数据中心发生严重的问题时， 仍然让数据处于安全状态。</p>
-<p>因为很多 Redis 用户都是创业者， 他们没有大把大把的钱可以浪费， 所以下面介绍的都是一些实用又便宜的容灾备份方法：</p>
-<ul>
-<li>Amazon S3 ，以及其他类似 S3 的服务，是一个构建灾难备份系统的好地方。 最简单的方法就是将你的每小时或者每日 RDB 备份加密并传送到 S3 。 对数据的加密可以通过 <code>gpg -c</code> 命令来完成（对称加密模式）。 记得把你的密码放到几个不同的、安全的地方去（比如你可以把密码复制给你组织里最重要的人物）。 同时使用多个储存服务来保存数据文件，可以提升数据的安全性。</li>
-<li>传送快照可以使用 SCP 来完成（SSH 的组件）。 以下是简单并且安全的传送方法： 买一个离你的数据中心非常远的 VPS ， 装上 SSH ， 创建一个无口令的 SSH 客户端 key ， 并将这个 key 添加到 VPS 的 authorized_keys 文件中， 这样就可以向这个 VPS 传送快照备份文件了。 为了达到最好的数据安全性，至少要从两个不同的提供商那里各购买一个 VPS 来进行数据容灾备份。</li>
-</ul>
-<p>需要注意的是， 这类容灾系统如果没有小心地进行处理的话， 是很容易失效的。</p>
-<p>最低限度下， 你应该在文件传送完毕之后， 检查所传送备份文件的体积和原始快照文件的体积是否相同。 如果你使用的是 VPS ， 那么还可以通过比对文件的 SHA1 校验和来确认文件是否传送完整。</p>
-<p>另外， 你还需要一个独立的警报系统， 让它在负责传送备份文件的传送器（transfer）失灵时通知你。</p>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="http://fatefrank.github.io/2020/06/23/nginx%E7%9A%84%E5%AE%89%E8%A3%85%E4%B8%8E%E4%BD%BF%E7%94%A8/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Seif Zheng">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Seif Zheng's blog">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2020/06/23/nginx%E7%9A%84%E5%AE%89%E8%A3%85%E4%B8%8E%E4%BD%BF%E7%94%A8/" class="post-title-link" itemprop="url">nginx的安装与使用</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-06-23 00:00:00" itemprop="dateCreated datePublished" datetime="2020-06-23T00:00:00+08:00">2020-06-23</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-08-04 15:48:47" itemprop="dateModified" datetime="2020-08-04T15:48:47+08:00">2020-08-04</time>
-              </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h2 id="nginx"><a href="#nginx" class="headerlink" title="nginx"></a>nginx</h2><h3 id="nginx的安装和运行"><a href="#nginx的安装和运行" class="headerlink" title="nginx的安装和运行"></a>nginx的安装和运行</h3><ol>
-<li><p>去官网<a target="_blank" rel="noopener" href="http://nginx.org/%E4%B8%8B%E8%BD%BD%E5%AF%B9%E5%BA%94%E7%9A%84nginx%E5%8C%85%EF%BC%8C%E6%8E%A8%E8%8D%90%E4%BD%BF%E7%94%A8%E7%A8%B3%E5%AE%9A%E7%89%88">http://nginx.org/下载对应的nginx包，推荐使用稳定版</a></p>
-</li>
-<li><p>上传nginx到系统的 /home/software</p>
-</li>
-<li><p>安装依赖环境</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 安装gcc库</span></span><br><span class="line">yum install gcc-c++</span><br><span class="line"><span class="meta">#</span><span class="bash"> 安装PCRE库，用于解析正则表达式</span></span><br><span class="line">yum install -y pcre pcre-devel</span><br><span class="line"><span class="meta">#</span><span class="bash"> 安装zlib压缩和解压缩依赖</span></span><br><span class="line">yum install -y zlib zlib-devel</span><br><span class="line"><span class="meta">#</span><span class="bash"> SSL安全的加密的套接字协议层，用于HTTP安全传输，也就是https</span></span><br><span class="line">yum install -y openssl spenssl-devel</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>解压nginx安装包，需要注意，解压得到是nginx源码，源码需要编译之后才能安装</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">tar -zxvf nginx-1.16.1.tar.gz</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>编译之前，先创建nginx临时目录；如果不创建，在启动nginx的过程中会报错</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">mkdir &#x2F;var&#x2F;temp&#x2F;nginx -p</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>在nginx目录，输入以下命令创建makefile文件</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">./configure \</span><br><span class="line">--prefix=/usr/local/nginx \</span><br><span class="line">--pid-path=/var/run/nginx/nginx.pid \</span><br><span class="line">--lock-path=/var/lock/nginx.lock \</span><br><span class="line">--error-log-path=/var/log/nginx/error.log \</span><br><span class="line">--http-log-path=/var/log/nginx/access.log \</span><br><span class="line">--with-http_gzip_static_module \</span><br><span class="line">--http-client-body-temp-path=/var/temp/nginx/client \</span><br><span class="line">--http-proxy-temp-path=/var/temp/nginx/proxy \</span><br><span class="line">--http-fastcgi-temp-path=/var/temp/nginx/fastcgi \</span><br><span class="line">--http-uwsgi-temp-path=/var/temp/nginx/uwsgi \</span><br><span class="line">--http-scgi-temp-path=/var/temp/nginx/scgi</span><br></pre></td></tr></table></figure>
-
-<p>注：\代表命令行中换行，提高可读性</p>
-<p>配置命令：</p>
-<table>
-<thead>
-<tr>
-<th align="left">参数</th>
-<th>描述</th>
-</tr>
-</thead>
-<tbody><tr>
-<td align="left">–prefix</td>
-<td>指定nginx安装目录</td>
-</tr>
-<tr>
-<td align="left">–pid-path</td>
-<td>指向nginx的pid</td>
-</tr>
-<tr>
-<td align="left">–lock-path</td>
-<td>锁定安装文件，防止被恶意篡改或误操作</td>
-</tr>
-<tr>
-<td align="left">–error-log-path</td>
-<td>错误日志</td>
-</tr>
-<tr>
-<td align="left">–http-log-path</td>
-<td>http日志</td>
-</tr>
-<tr>
-<td align="left">–with-http_gzip_static_module</td>
-<td>启用gzip模块，在线实时压缩输出数据流</td>
-</tr>
-<tr>
-<td align="left">–http-client-body-temp-path</td>
-<td>设定客户端请求的临时目录</td>
-</tr>
-<tr>
-<td align="left">–http-proxy-temp-path</td>
-<td>设定http代理临时目录</td>
-</tr>
-<tr>
-<td align="left">–http-fastcgi-temp-path</td>
-<td>设定fastcgi临时目录</td>
-</tr>
-<tr>
-<td align="left">–http-uwsgi-temp-path</td>
-<td>设定uwsgi临时目录</td>
-</tr>
-<tr>
-<td align="left">–http-scgi-temp-path</td>
-<td>设定scgi临时目录</td>
-</tr>
-</tbody></table>
-</li>
-<li><p>make编译</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">make</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>安装</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">make install</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>进入sbin目录启动nginx</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">./nginx</span><br><span class="line">./nginx -s stop            // 停止</span><br><span class="line">./nginx -s reload        // 重新加载</span><br></pre></td></tr></table></figure>
-
-</li>
-</ol>
-<p><strong>注意事项：</strong></p>
-<ol>
-<li><p>如果在云服务器安装，需要开启默认的nginx端口：80</p>
-</li>
-<li><p>如果在虚拟机安装，需要关闭防火墙</p>
-</li>
-<li><p>本地win或mac需要关闭防火墙</p>
-</li>
-</ol>
-<h3 id="nginx的进程模型"><a href="#nginx的进程模型" class="headerlink" title="nginx的进程模型"></a>nginx的进程模型</h3><p>​        nginx在启动后，在unix系统中会以daemon的方式在后台运行，后台进程包含一个master进程和多个worker进程。我们也可以手动地关掉后台模式，让nginx在前台运行，并且通过配置让nginx取消master进程，从而可以使nginx以单进程方式运行。很显然，生产环境下我们肯定不会这么做，所以关闭后台模式，一般是用来调试用的，在后面的章节里面，我们会详细地讲解如何调试nginx。所以，我们可以看到，nginx是以<strong>多进程</strong>的方式来工作的，当然nginx也是支持多线程的方式的，只是我们主流的方式还是<strong>多进程</strong>的方式，也是<strong>nginx的默认方式</strong>。nginx采用多进程的方式有诸多好处，所以我就主要讲解nginx的多进程模式吧。</p>
-<p>​        刚才讲到，nginx在启动后，会有一个master进程和多个worker进程。master进程主要用来管理worker进程，包含：接收来自外界的信号，向各worker进程发送信号，监控worker进程的运行状态，当worker进程退出后(异常情况下)，会自动重新启动新的worker进程。而基本的网络事件，则是放在worker进程中来处理了。多个worker进程之间是对等的，他们同等竞争来自客户端的请求，各进程互相之间是独立的。一个请求，只可能在一个worker进程中处理，一个worker进程，不可能处理其它进程的请求。worker进程的个数是可以设置的，一般我们会设置与机器cpu核数一致，这里面的原因与nginx的进程模型以及事件处理模型是分不开的。nginx的进程模型，可以由下图来表示：</p>
-<p>​        在nginx启动后，如果我们要操作nginx，要怎么做呢？从上文中我们可以看到，master来管理worker进程，所以我们只需要与master进程通信就行了。master进程会接收来自外界发来的信号，再根据信号做不同的事情。所以我们要控制nginx，只需要通过kill向master进程发送信号就行了。比如kill -HUP pid，则是告诉nginx，从容地重启nginx，我们一般用这个信号来重启nginx，或重新加载配置，因为是从容地重启，因此服务是不中断的。master进程在接收到HUP信号后是怎么做的呢？首先master进程在接到信号后，会先重新加载配置文件，然后再启动新的worker进程，并向所有老的worker进程发送信号，告诉他们可以光荣退休了。新的worker在启动后，就开始接收新的请求，而老的worker在收到来自master的信号后，就不再接收新的请求，并且在当前进程中的所有未处理完的请求处理完成后，再退出。当然，直接给master进程发送信号，这是比较老的操作方式，nginx在0.8版本之后，引入了一系列命令行参数，来方便我们管理。比如，./nginx -s reload，就是来重启nginx，./nginx -s stop，就是来停止nginx的运行。如何做到的呢？我们还是拿reload来说，我们看到，执行命令时，我们是启动一个新的nginx进程，而新的nginx进程在解析到reload参数后，就知道我们的目的是控制nginx来重新加载配置文件了，它会向master进程发送信号，然后接下来的动作，就和我们直接向master进程发送信号一样了。</p>
-<p>​        现在，我们知道了当我们在操作nginx的时候，nginx内部做了些什么事情，那么，worker进程又是如何处理请求的呢？我们前面有提到，worker进程之间是平等的，每个进程，处理请求的机会也是一样的。当我们提供80端口的http服务时，一个连接请求过来，每个进程都有可能处理这个连接，怎么做到的呢？首先，每个worker进程都是从master进程fork过来，在master进程里面，先建立好需要listen的socket（listenfd）之后，然后再fork出多个worker进程。所有worker进程的listenfd会在新连接到来时变得可读，为保证只有一个进程处理该连接，所有worker进程在注册listenfd读事件前抢accept_mutex，抢到互斥锁的那个进程注册listenfd读事件，在读事件里调用accept接受该连接。当一个worker进程在accept这个连接之后，就开始读取请求，解析请求，处理请求，产生数据后，再返回给客户端，最后才断开连接，这样一个完整的请求就是这样的了。我们可以看到，一个请求，完全由worker进程来处理，而且只在一个worker进程中处理。</p>
-<p>​        整理一下就是：</p>
-<p>​        1）每个worker进程都是从master进程fork过来，在master进程里面，先建立好需要listen的    socket（listenfd）之后，然后再fork出多个worker进程。</p>
-<p>​        2）新连接到来，所有worker进程的listenfd会变得可读，为保证只有一个进程处理该连接</p>
-<p>​        3）所有worker进程在抢accept_mutex（互斥锁），即竞争</p>
-<p>​        4）抢到互斥锁的那个worker进程注册listenfd读事件</p>
-<p>​        5）竞争成功的worker进程在读事件里调用accept接受该连接</p>
-<p>​        6）竞争成功的worker进程读取请求，解析请求，处理请求，产生数据后，再返回给客户端，最后才断开连接</p>
-<p>​        那么，nginx采用这种进程模型有什么好处呢？当然，好处肯定会很多了。首先，对于每个worker进程来说，独立的进程，不需要加锁，所以省掉了锁带来的开销，同时在编程以及问题查找时，也会方便很多。其次，采用独立的进程，可以让互相之间不会影响，一个进程退出后，其它进程还在工作，服务不会中断，master进程则很快启动新的worker进程。当然，worker进程的异常退出，肯定是程序有bug了，异常退出，会导致当前worker上的所有请求失败，不过不会影响到所有请求，所以降低了风险。当然，好处还有很多，大家可以慢慢体会。</p>
-<p>​        上面讲了很多关于nginx的进程模型，接下来，我们来看看nginx是如何处理事件的。</p>
-<p>​        有人可能要问了，nginx采用多worker的方式来处理请求，每个worker里面只有一个主线程，那能够处理的并发数很有限啊，多少个worker就能处理多少个并发，何来高并发呢？非也，这就是nginx的高明之处，nginx采用了<strong>异步非阻塞</strong>的方式来处理请求，也就是说，nginx是可以同时处理成千上万个请求的。想想apache的常用工作方式（apache也有异步非阻塞版本，但因其与自带某些模块冲突，所以不常用），每个请求会独占一个工作线程，当并发数上到几千时，就同时有几千的线程在处理请求了。这对操作系统来说，是个不小的挑战，线程带来的内存占用非常大，线程的上下文切换带来的cpu开销很大，自然性能就上不去了，而这些开销完全是没有意义的。</p>
-<p>​        为什么nginx可以采用异步非阻塞的方式来处理呢，或者异步非阻塞到底是怎么回事呢？我们先回到原点，看看一个请求的完整过程。首先，请求过来，要建立连接，然后再接收数据，接收数据后，再发送数据。具体到系统底层，就是读写事件，而当读写事件没有准备好时，必然不可操作，如果不用非阻塞的方式来调用，那就得阻塞调用了，事件没有准备好，那就只能等了，等事件准备好了，你再继续吧。阻塞调用会进入内核等待，cpu就会让出去给别人用了，对单线程的worker来说，显然不合适，当网络事件越多时，大家都在等待呢，cpu空闲下来没人用，cpu利用率自然上不去了，更别谈高并发了。好吧，你说加进程数，这跟apache的线程模型有什么区别，注意，别增加无谓的上下文切换。所以，在nginx里面，最忌讳阻塞的系统调用了。不要阻塞，那就非阻塞喽。非阻塞就是，事件没有准备好，马上返回EAGAIN，告诉你，事件还没准备好呢，你慌什么，过会再来吧。好吧，你过一会，再来检查一下事件，直到事件准备好了为止，在这期间，你就可以先去做其它事情，然后再来看看事件好了没。虽然不阻塞了，但你得不时地过来检查一下事件的状态，你可以做更多的事情了，但带来的开销也是不小的。所以，才会有了<strong>异步非阻塞的事件处理机制</strong>，具体到系统调用就是像select/poll/epoll/kqueue这样的系统调用。<u>它们提供了一种机制，让你可以同时监控多个事件，调用他们是阻塞的，但可以设置超时时间，在超时时间之内，如果有事件准备好了，就返回。</u>这种机制正好解决了我们上面的两个问题，拿epoll为例(在后面的例子中，我们多以epoll为例子，以代表这一类函数)，<u>当事件没准备好时，放到epoll(每个worker进程独有)里面，事件准备好了，我们就去读写，当读写返回EAGAIN时，我们将它再次加入到epoll里面。这样，只要有事件准备好了，我们就去处理它，只有当所有事件都没准备好时，才在epoll里面等着。</u><u>这样，我们就可以并发处理大量的并发了，当然，这里的并发请求，是指未处理完的请求，线程只有一个，所以同时能处理的请求当然只有一个了，只是在请求间进行不断地切换而已，切换也是因为异步事件未准备好，而主动让出的。这里的切换是没有任何代价，你可以理解为循环处理多个准备好的事件，事实上就是这样的。</u>与多线程相比，这种事件处理方式是有很大的优势的，不需要创建线程，每个请求占用的内存也很少，没有上下文切换，事件处理非常的轻量级。并发数再多也不会导致无谓的资源浪费（上下文切换）。更多的并发数，只是会占用更多的内存而已。 我之前有对连接数进行过测试，在24G内存的机器上，处理的并发请求数达到过200万。现在的网络服务器基本都采用这种方式，这也是nginx性能高效的主要原因。</p>
-<p>​        我们之前说过，推荐设置worker的个数为cpu的核数，在这里就很容易理解了，更多的worker数，只会导致进程来竞争cpu资源了，从而带来不必要的上下文切换。而且，nginx为了更好的利用多核特性，提供了cpu亲缘性的绑定选项，我们可以将某一个进程绑定在某一个核上，这样就不会因为进程的切换带来cache的失效。像这种小的优化在nginx中非常常见，同时也说明了nginx作者的苦心孤诣。比如，nginx在做4个字节的字符串比较时，会将4个字符转换成一个int型，再作比较，以减少cpu的指令数等等。</p>
-<p>​        现在，知道了nginx为什么会选择这样的进程模型与事件模型了。</p>
-<h3 id="nginx-conf核心配置文件"><a href="#nginx-conf核心配置文件" class="headerlink" title="nginx.conf核心配置文件"></a>nginx.conf核心配置文件</h3><ol>
-<li><p>设置worker进程的用户，指的是linux的用户，会涉及到nginx操作目录或文件的一些权限，默认为nobody</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">user boot;</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>worker进程工作数设置，一般来说cpu有几个，就设置几个，或者设置N-1也行</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">worker_processes 1;</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>nginx日志级别 debug | info | notice | warn | error | crit | alert | emerg，错误级别从左到右越来越大</p>
-</li>
-<li><p>设置nginx进程 pid</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">pid     logs/nginx.pid;</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>设置工作模式</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">events &#123;</span><br><span class="line"><span class="meta">    #</span><span class="bash"> 默认使用epoll</span></span><br><span class="line">    use epoll;</span><br><span class="line"><span class="meta">    #</span><span class="bash"> 每个worker允许连接的客户端最大连接数</span></span><br><span class="line">    worker_connections 10240;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>http 是指令块，针对http网络传输的一些指令配置</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">http &#123;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>include 引入外部配置，提高可读性，避免单个配置文件过大</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">include     mine.types;</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>设定日志格式，main为定义的格式名称，如此access_log就可以直接使用这个变量了</p>
-<table>
-<thead>
-<tr>
-<th>参数名</th>
-<th>参数意义</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>$remote_addr</td>
-<td>客户端ip</td>
-</tr>
-<tr>
-<td>$remote_user</td>
-<td>远程客户端用户名，一般为：‘-’</td>
-</tr>
-<tr>
-<td>$time_local</td>
-<td>时间和时区</td>
-</tr>
-<tr>
-<td>$request</td>
-<td>请求的url及method</td>
-</tr>
-<tr>
-<td>$status</td>
-<td>响应状态码</td>
-</tr>
-<tr>
-<td>$body_bytes_sent</td>
-<td>响应客户端内容字节数</td>
-</tr>
-<tr>
-<td>$http_referer</td>
-<td>记录用户从哪个链接跳转过来的</td>
-</tr>
-<tr>
-<td>$http_user_agent</td>
-<td>用户所使用的代理，一般来时都是浏览器</td>
-</tr>
-<tr>
-<td>$http_x_forwarded_for</td>
-<td>通过代理服务器来记录客户端的ip</td>
-</tr>
-</tbody></table>
-</li>
-<li><p>sendfile使用高效文件传输，提升传输性能。启用后才能使用tcp_nopush，是指当数据表累积一定大小后才发送，提高了效率</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">sendfile    on;</span><br><span class="line">tcp_nopush    on;</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>keepalive_timeout 设置客户端与服务端请求的超时时间，保证客户端多次请求的时候不会建立新的连接，节约资源损耗。</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash">keepalive_timeout     0;</span></span><br><span class="line">keepalive_timeout 65;</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>gzip启用压缩，html/js/css压缩后传输会更快，但也会增加cpu负担</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gzip    on;</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>server 可以在http指令块设置多个虚拟主机</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">server &#123;</span><br><span class="line">    listen        88;                        # 监听端口</span><br><span class="line">    server_name    localhost;                # ip，域名</span><br><span class="line">    </span><br><span class="line">    location / &#123;                        # 请求路由映射，匹配拦截</span><br><span class="line">        root    html;                    # 请求位置</span><br><span class="line">        index    index.html    index.htm;    # 首页位置</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-
-
-</li>
-</ol>
-<h3 id="nginx日志切割"><a href="#nginx日志切割" class="headerlink" title="nginx日志切割"></a>nginx日志切割</h3><p>​        现有的日志都保存在access.log中，随着时间的推移，文件越来越大，不利于查看。可以以天为单位，把大日志文件切分成多个小日志文件。如果每天的日志量很大，可以切分地更细。</p>
-<ol>
-<li><p>创建一个shell可执行文件：/usr/local/nginx/sbin/cut_my_log.sh，内容为：</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash">!/bin/bash</span></span><br><span class="line">LOG_PATH=&quot;/var/log/nginx/&quot;</span><br><span class="line">RECORD_TIME=$(date -d &quot;yesterday&quot; +%Y-%m-%d+%H:%M)</span><br><span class="line">PID=/var/run/nginx/nginx.pid</span><br><span class="line"><span class="meta">#</span><span class="bash">重命名nginx的日志文件</span></span><br><span class="line">mv $&#123;LOG_PATH&#125;/access.log $&#123;LOG_PATH&#125;/access.$&#123;RECORD_TIME&#125;.log</span><br><span class="line">mv $&#123;LOG_PATH&#125;/error.log $&#123;LOG_PATH&#125;/error.$&#123;RECORD_TIME&#125;.log</span><br><span class="line"><span class="meta">#</span><span class="bash">向nginx主进程发送信号, 用于重新打开日志文件</span></span><br><span class="line">kill -USR1 `cat $PID`</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>为cut_my_log.sh添加可执行的权限：</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">chmod +x cut_my_log.sh</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>测试日志切割后的结果</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./cut_my_log.sh</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>安装定时任务</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">yum install crontabs</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>crontab -e 编辑并且添加一行新的定时任务</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 每日的23点59分执行切割日志的脚本</span></span><br><span class="line">59 23 * * * /usr/local/nginx/sbin/cut_nginx_log.sh</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>重启定时任务</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">service crond restart</span><br></pre></td></tr></table></figure>
-
-
-
-</li>
-</ol>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
 
   
   <nav class="pagination">
-    <a class="extend prev" rel="prev" href="/page/2/"><i class="fa fa-angle-left" aria-label="上一页"></i></a><a class="page-number" href="/">1</a><a class="page-number" href="/page/2/">2</a><span class="page-number current">3</span>
+    <a class="extend prev" rel="prev" href="/page/2/"><i class="fa fa-angle-left" aria-label="上一页"></i></a><a class="page-number" href="/">1</a><a class="page-number" href="/page/2/">2</a><span class="page-number current">3</span><a class="page-number" href="/page/4/">4</a><a class="extend next" rel="next" href="/page/4/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
   </nav>
 
 
@@ -948,12 +1028,12 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">13</span>
+          <span class="site-state-item-count">17</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-tags">
-        <span class="site-state-item-count">5</span>
+        <span class="site-state-item-count">8</span>
         <span class="site-state-item-name">标签</span>
       </div>
   </nav>
